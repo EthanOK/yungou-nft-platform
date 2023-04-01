@@ -33,7 +33,7 @@ contract YgStaking is
 
     mapping(uint256 => bool) public orderIsInvalid;
 
-    mapping(address => bool) private operator;
+    mapping(address => bool) public operator;
 
     uint128 public accountTotal;
 
@@ -105,19 +105,6 @@ contract YgStaking is
             "invalid staking time"
         );
 
-        for (uint256 i = 0; i < length; ) {
-            require(
-                !stakingDatas[_tokenIds[i]].stakedState,
-                "invalid stake state"
-            );
-
-            require(ygme.ownerOf(_tokenIds[i]) == _account, "invalid owner");
-
-            unchecked {
-                ++i;
-            }
-        }
-
         if (stakingTokenIds[_account].length == 0) {
             unchecked {
                 accountTotal += 1;
@@ -127,12 +114,14 @@ contract YgStaking is
         for (uint256 i = 0; i < length; ) {
             uint256 _tokenId = _tokenIds[i];
 
-            ygme.safeTransferFrom(_account, address(this), _tokenId);
+            require(!stakingDatas[_tokenId].stakedState, "invalid stake state");
+
+            require(ygme.ownerOf(_tokenId) == _account, "invalid owner");
 
             StakingData memory _data = StakingData({
                 owner: _account,
-                startTime: block.timestamp,
-                endTime: block.timestamp + _stakeTime,
+                startTime: uint128(block.timestamp),
+                endTime: uint128(block.timestamp + _stakeTime),
                 stakedState: true
             });
 
@@ -147,6 +136,8 @@ contract YgStaking is
             unchecked {
                 ygmeTotal += 1;
             }
+
+            ygme.safeTransferFrom(_account, address(this), _tokenId);
 
             emit Staking(
                 _account,
@@ -186,8 +177,6 @@ contract YgStaking is
                 "It's not time to unStake"
             );
 
-            ygme.safeTransferFrom(address(this), _data.owner, _tokenId);
-
             uint256 _len = stakingTokenIds[_account].length;
 
             for (uint256 j = 0; j < _len; j++) {
@@ -215,6 +204,8 @@ contract YgStaking is
             );
 
             delete stakingDatas[_tokenId];
+
+            ygme.safeTransferFrom(address(this), _account, _tokenId);
 
             unchecked {
                 ++i;

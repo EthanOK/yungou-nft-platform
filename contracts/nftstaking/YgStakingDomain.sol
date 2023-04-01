@@ -4,16 +4,9 @@ pragma solidity ^0.8.0;
 abstract contract YgStakingDomain {
     struct StakingData {
         address owner;
-        uint256 startTime;
-        uint256 endTime;
         bool stakedState;
-    }
-
-    struct Order {
-        uint256 orderId;
-        address account;
-        uint256 amount;
-        uint256 random;
+        uint128 startTime;
+        uint128 endTime;
     }
 
     /* An ECDSA signature. */
