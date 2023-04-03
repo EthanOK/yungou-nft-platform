@@ -20,7 +20,7 @@ contract YgStaking is
     using SafeERC20 for IERC20;
 
     modifier onlyOperator() {
-        require(operator[_msgSender()], "you're not operator");
+        require(operator[_msgSender()], "not operator");
         _;
     }
 
@@ -102,13 +102,13 @@ contract YgStaking is
 
         address _account = _msgSender();
 
-        require(length > 0, "invalid _tokenIds");
+        require(length > 0, "invalid tokenIds");
 
         require(
             _stakeTime == stakingPeriods[0] ||
                 _stakeTime == stakingPeriods[1] ||
                 _stakeTime == stakingPeriods[2],
-            "invalid staking time"
+            "invalid stake time"
         );
 
         if (stakingTokenIds[_account].length == 0) {
@@ -117,7 +117,7 @@ contract YgStaking is
             }
         }
 
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 _tokenId = _tokenIds[i];
 
             require(!stakingDatas[_tokenId].stakedState, "invalid stake state");
@@ -126,9 +126,9 @@ contract YgStaking is
 
             StakingData memory _data = StakingData({
                 owner: _account,
+                stakedState: true,
                 startTime: uint128(block.timestamp),
-                endTime: uint128(block.timestamp + _stakeTime),
-                stakedState: true
+                endTime: uint128(block.timestamp + _stakeTime)
             });
 
             stakingDatas[_tokenId] = _data;
@@ -137,10 +137,6 @@ contract YgStaking is
                 stakingTokenIds[_account] = [_tokenId];
             } else {
                 stakingTokenIds[_account].push(_tokenId);
-            }
-
-            unchecked {
-                ygmeTotal += 1;
             }
 
             ygme.safeTransferFrom(_account, address(this), _tokenId);
@@ -152,11 +148,12 @@ contract YgStaking is
                 _data.startTime,
                 _data.endTime
             );
-
-            unchecked {
-                ++i;
-            }
         }
+
+        unchecked {
+            ygmeTotal += uint128(length);
+        }
+
         return true;
     }
 
@@ -169,23 +166,20 @@ contract YgStaking is
 
         require(length > 0, "invalid tokenIds");
 
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 _tokenId = _tokenIds[i];
 
-            StakingData storage _data = stakingDatas[_tokenId];
+            StakingData memory _data = stakingDatas[_tokenId];
 
             require(_data.owner == _account, "invalid account");
 
-            require(stakingDatas[_tokenId].stakedState, "invalid stake state");
+            require(_data.stakedState, "invalid stake state");
 
-            require(
-                block.timestamp >= _data.endTime,
-                "It's not time to unStake"
-            );
+            require(block.timestamp >= _data.endTime, "too early to unStake");
 
             uint256 _len = stakingTokenIds[_account].length;
 
-            for (uint256 j = 0; j < _len; j++) {
+            for (uint256 j = 0; j < _len; ++j) {
                 if (stakingTokenIds[_account][j] == _tokenId) {
                     stakingTokenIds[_account][j] = stakingTokenIds[_account][
                         _len - 1
@@ -194,12 +188,6 @@ contract YgStaking is
                     break;
                 }
             }
-
-            if (stakingTokenIds[_account].length == 0) {
-                accountTotal -= 1;
-            }
-
-            ygmeTotal -= 1;
 
             emit UnStake(
                 _account,
@@ -212,11 +200,14 @@ contract YgStaking is
             delete stakingDatas[_tokenId];
 
             ygme.safeTransferFrom(address(this), _account, _tokenId);
-
-            unchecked {
-                ++i;
-            }
         }
+
+        if (stakingTokenIds[_account].length == 0) {
+            accountTotal -= 1;
+        }
+
+        ygmeTotal -= uint128(length);
+
         return true;
     }
 
@@ -224,6 +215,8 @@ contract YgStaking is
         bytes calldata data,
         Sig calldata sig
     ) external nonReentrant returns (bool) {
+        require(data.length > 0, "invalid data");
+
         bytes32 hash = keccak256(data);
 
         _verifySignature(hash, sig);
@@ -236,9 +229,9 @@ contract YgStaking is
             string memory random
         ) = abi.decode(data, (uint256, address, address, uint256, string));
 
-        require(!orderIsInvalid[orderId], "order is invalid");
+        require(!orderIsInvalid[orderId], "invalid orderId");
 
-        require(account == _msgSender(), "caller is not the account");
+        require(account == _msgSender(), "invalid account");
 
         orderIsInvalid[orderId] = true;
 
@@ -254,7 +247,7 @@ contract YgStaking is
 
         address signer = ecrecover(hash, sig.v, sig.r, sig.s);
 
-        require(signer == withdrawSigner, "incorrect withdraw signature");
+        require(signer == withdrawSigner, "invalid signature");
     }
 
     function _toEthSignedMessageHash(
@@ -282,18 +275,14 @@ contract YgStaking is
 
         Call calldata call;
 
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length; ++i) {
             bool success;
 
             call = calls[i];
 
             (success, returnData[i]) = call.target.staticcall(call.callData);
 
-            require(success, "Multicall3: call failed");
-
-            unchecked {
-                ++i;
-            }
+            require(success, "call failed");
         }
     }
 
