@@ -238,7 +238,7 @@ contract YgStaking is
 
         require(!orderIsInvalid[orderId], "order is invalid");
 
-        require(account == msg.sender, "caller is not the account");
+        require(account == _msgSender(), "caller is not the account");
 
         orderIsInvalid[orderId] = true;
 
