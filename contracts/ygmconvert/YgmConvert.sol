@@ -9,10 +9,6 @@ interface IYGME {
     function swap(address to, address _recommender, uint mintNum) external;
 
     function balanceOf(address owner) external view returns (uint256 balance);
-
-    function recommender(
-        address account
-    ) external view returns (address recommender);
 }
 
 interface IYGM {
