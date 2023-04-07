@@ -7,6 +7,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface IYGME {
     function swap(address to, address _recommender, uint mintNum) external;
+
+    function balanceOf(address owner) external view returns (uint256 balance);
+
+    function recommender(
+        address account
+    ) external view returns (address recommender);
 }
 
 interface IYGM {
@@ -52,9 +58,14 @@ contract YgmConvert is Pausable, Ownable, ReentrancyGuard {
     }
 
     function convert(
-        uint256[] calldata tokenIds
+        uint256[] calldata tokenIds,
+        address _recommender
     ) external whenNotPaused nonReentrant returns (bool) {
         address account = _msgSender();
+
+        require(_recommender != address(0), "recommender can not be zero");
+        require(_recommender != account, "recommender can not be self");
+        require(ygme.balanceOf(_recommender) > 0, "invalid recommender");
 
         uint256 len = tokenIds.length;
 
@@ -70,7 +81,7 @@ contract YgmConvert is Pausable, Ownable, ReentrancyGuard {
 
         uint256 amount = len * rate;
 
-        ygme.swap(account, address(0), amount);
+        ygme.swap(account, _recommender, amount);
 
         emit Convert(account, tokenIds, amount);
 
