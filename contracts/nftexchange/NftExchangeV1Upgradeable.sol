@@ -60,12 +60,12 @@ contract NftExchangeV1Upgradeable is
         return royaltyFeeSigner;
     }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
+    function setPause() external onlyOwner {
+        if (!paused()) {
+            _pause();
+        } else {
+            _unpause();
+        }
     }
 
     function exchange(
