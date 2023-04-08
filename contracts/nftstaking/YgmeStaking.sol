@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 abstract contract YgmeStakingDomain {
     struct StakingData {
@@ -15,16 +16,6 @@ abstract contract YgmeStakingDomain {
         bool stakedState;
         uint128 startTime;
         uint128 endTime;
-    }
-
-    /* An ECDSA signature. */
-    struct Sig {
-        /* v parameter */
-        uint8 v;
-        /* r parameter */
-        bytes32 r;
-        /* s parameter */
-        bytes32 s;
     }
 
     // Multi Call
@@ -53,6 +44,7 @@ contract YgmeStaking is
     ReentrancyGuard
 {
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     modifier onlyOperator() {
         require(operator[_msgSender()], "not operator");
@@ -247,13 +239,13 @@ contract YgmeStaking is
 
     function withdrawERC20(
         bytes calldata data,
-        Sig calldata sig
+        bytes calldata signature
     ) external nonReentrant returns (bool) {
         require(data.length > 0, "invalid data");
 
         bytes32 hash = keccak256(data);
 
-        _verifySignature(hash, sig);
+        _verifySignature(hash, signature);
 
         (uint256 orderId, address account, uint256 amount) = abi.decode(
             data,
@@ -273,21 +265,15 @@ contract YgmeStaking is
         return true;
     }
 
-    function _verifySignature(bytes32 hash, Sig calldata sig) internal view {
-        hash = _toEthSignedMessageHash(hash);
+    function _verifySignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) internal view {
+        hash = hash.toEthSignedMessageHash();
 
-        address signer = ecrecover(hash, sig.v, sig.r, sig.s);
+        address signer = hash.recover(signature);
 
         require(signer == withdrawSigner, "invalid signature");
-    }
-
-    function _toEthSignedMessageHash(
-        bytes32 hash
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
-            );
     }
 
     function aggregateStaticCall(
