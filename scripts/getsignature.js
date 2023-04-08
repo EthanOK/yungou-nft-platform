@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const { ethers } = require("ethers");
 
 async function getEncodedDataAndhashData(orderId, account, amount) {
   const type = ["uint256", "address", "uint256"];
@@ -17,7 +17,10 @@ async function getSignature(hashData, signer) {
   return signPromise_;
 }
 async function main() {
-  const [owner, otherAccount, signer] = await ethers.getSigners();
+  //   let privateKey = "";
+  //   let signer = new ethers.Wallet(privateKey);
+  let signer = ethers.Wallet.createRandom();
+  let otherAccount = ethers.Wallet.createRandom();
   let [encodedData, hashData] = await getEncodedDataAndhashData(
     1,
     otherAccount.address,

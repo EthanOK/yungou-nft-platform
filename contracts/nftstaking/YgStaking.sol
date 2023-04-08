@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract YgStaking is
     YgStakingDomain,
@@ -18,6 +19,7 @@ contract YgStaking is
     ReentrancyGuard
 {
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     modifier onlyOperator() {
         require(operator[_msgSender()], "not operator");
@@ -28,7 +30,7 @@ contract YgStaking is
 
     IERC721 public ygme;
 
-    IERC20 public erc20;
+    IERC20 public ygio;
 
     address private withdrawSigner;
 
@@ -47,12 +49,12 @@ contract YgStaking is
     // TODO: _periods [30 days, 90 days, 180 days] 1 days = 86400 s
     constructor(
         address _ygme,
-        address _erc20,
+        address _ygio,
         address _withdrawSigner,
         uint64[3] memory _periods
     ) {
         ygme = IERC721(_ygme);
-        erc20 = IERC20(_erc20);
+        ygio = IERC20(_ygio);
         withdrawSigner = _withdrawSigner;
         stakingPeriods = _periods;
     }
@@ -215,20 +217,18 @@ contract YgStaking is
 
     function withdrawERC20(
         bytes calldata data,
-        Sig calldata sig
+        bytes calldata signature
     ) external nonReentrant returns (bool) {
         require(data.length > 0, "invalid data");
 
         bytes32 hash = keccak256(data);
 
-        _verifySignature(hash, sig);
+        _verifySignature(hash, signature);
 
-        (
-            uint256 orderId,
-            address account,
-            uint256 amount,
-            string memory random
-        ) = abi.decode(data, (uint256, address, uint256, string));
+        (uint256 orderId, address account, uint256 amount) = abi.decode(
+            data,
+            (uint256, address, uint256)
+        );
 
         require(!orderIsInvalid[orderId], "invalid orderId");
 
@@ -236,28 +236,22 @@ contract YgStaking is
 
         orderIsInvalid[orderId] = true;
 
-        erc20.safeTransfer(account, amount);
+        ygio.safeTransfer(account, amount);
 
-        emit WithdrawERC20(orderId, address(erc20), account, amount, random);
+        emit WithdrawERC20(orderId, account, amount);
 
         return true;
     }
 
-    function _verifySignature(bytes32 hash, Sig calldata sig) internal view {
-        hash = _toEthSignedMessageHash(hash);
+    function _verifySignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) internal view {
+        hash = hash.toEthSignedMessageHash();
 
-        address signer = ecrecover(hash, sig.v, sig.r, sig.s);
+        address signer = hash.recover(signature);
 
         require(signer == withdrawSigner, "invalid signature");
-    }
-
-    function _toEthSignedMessageHash(
-        bytes32 hash
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
-            );
     }
 
     function aggregateStaticCall(
