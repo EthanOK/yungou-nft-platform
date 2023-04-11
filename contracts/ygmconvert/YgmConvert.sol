@@ -14,27 +14,23 @@ interface IYGME {
 interface IYGM {
     function ownerOf(uint256 tokenId) external view returns (address owner);
 
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) external;
+    function transferFrom(address from, address to, uint256 tokenId) external;
 }
 
 contract YgmConvert is Pausable, Ownable, ReentrancyGuard {
     event Convert(address account, uint256[] tokokenIds, uint256 amount);
 
+    address public constant BURN_ADDRESS = address(1);
+
     IYGM public immutable ygm;
     IYGME public immutable ygme;
-    address public immutable receiver;
 
     uint256 public maxOnce = 3;
     uint256 public rate = 10;
 
-    constructor(address _ygm, address _ygme, address _receiver) {
+    constructor(address _ygm, address _ygme) {
         ygm = IYGM(_ygm);
         ygme = IYGME(_ygme);
-        receiver = _receiver;
     }
 
     function setPause() external onlyOwner {
@@ -65,14 +61,14 @@ contract YgmConvert is Pausable, Ownable, ReentrancyGuard {
 
         uint256 len = tokenIds.length;
 
-        require(len > 0 && len <= maxOnce, "Invalid tokenIds");
+        require(len > 0 && len <= maxOnce, "Invalid tokenIds length");
 
         for (uint i = 0; i < len; ++i) {
             uint256 tokenId = tokenIds[i];
 
-            require(ygm.ownerOf(tokenId) == account, "Invalid account");
+            require(ygm.ownerOf(tokenId) == account, "Invalid tokenId");
 
-            ygm.safeTransferFrom(account, receiver, tokenId);
+            ygm.transferFrom(account, BURN_ADDRESS, tokenId);
         }
 
         uint256 amount = len * rate;
