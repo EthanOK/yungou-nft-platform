@@ -23,8 +23,8 @@ async function main() {
   let otherAccount = ethers.Wallet.createRandom();
   let [encodedData, hashData] = await getEncodedDataAndhashData(
     1,
-    otherAccount.address,
-    10000000
+    "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
+    1
   );
   console.log(encodedData);
   console.log(hashData);
@@ -33,3 +33,5 @@ async function main() {
   console.log(signature);
 }
 main();
+
+// hashData: 0x5ada2fcadc9a0ac04e0d8ce24250282d6b7f6a433f857715b604fc4a5caab4c3
