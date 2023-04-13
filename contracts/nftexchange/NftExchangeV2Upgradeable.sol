@@ -27,9 +27,6 @@ contract NftExchangeV2Upgradeable is
     address payable public beneficiary;
     address private royaltyFeeSigner;
     uint256 public platformFee;
-    // delete
-    bytes32 public hashorders;
-    bool public isValid;
 
     function initialize(
         address payable _beneficiary,
@@ -69,10 +66,6 @@ contract NftExchangeV2Upgradeable is
         } else {
             _unpause();
         }
-    }
-
-    function setVaild() external onlyOwner {
-        isValid = !isValid;
     }
 
     function exchange(
@@ -200,11 +193,7 @@ contract NftExchangeV2Upgradeable is
 
         require(block.timestamp <= endTime, "royalty sig has expired");
 
-        hashorders = keccak256(abi.encode(orders, royaltyFees, endTime));
-
-        if (isValid) {
-            _validateRoyaltyFeeSigMul(orders, royaltyFees, endTime, royaltySig);
-        }
+        _validateRoyaltyFeeSigMul(orders, royaltyFees, endTime, royaltySig);
 
         uint256 totalFeeETH;
 
