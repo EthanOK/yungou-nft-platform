@@ -14,4 +14,5 @@ async function main() {
 
 main();
 
-// npx hardhat run scripts/create-nftexchange.js --network goerli
+// npx hardhat run scripts/deployupgrade-nftexchange.js --network sepolia
+// npx hardhat verify --network sepolia 0x0cbb378181adb971287df89f1f2a9e9cf62af72c
