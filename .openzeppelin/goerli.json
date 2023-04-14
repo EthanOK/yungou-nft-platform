@@ -29,6 +29,11 @@
       "address": "0x2081ff71Ab5d46dB6509cB5B1faFC2B4d09423F4",
       "txHash": "0x9d95850a20d1b184eb85c0fe1488a62ee483d3cc4f174c32cfbc3a641fee1947",
       "kind": "transparent"
+    },
+    {
+      "address": "0x5D0C8b801d2Fd1dEEBB5aDfA89a8609becD01D83",
+      "txHash": "0xf0e96a99b1bd782b90361b9c01d081cee560f1fb6f987ea5b707d1e3eb1e9929",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -470,6 +475,154 @@
           },
           "t_bytes32": {
             "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "0e5ea6093807dcb214d53685a86cb6f8c030736b42c8a601d1e2d0e55ab0ae3a": {
+      "address": "0x288305149ae0Ed3C1e7704baE1F3b7d83d27F71c",
+      "txHash": "0x2f1ec417f7a26c5022f52ad820b882511b9982f2729c38968f28216dbe4f12a2",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:80"
+          },
+          {
+            "label": "beneficiary",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_address_payable",
+            "contract": "NftExchangeV2UpgradeableT",
+            "src": "contracts\\nftexchange\\NftExchangeV2UpgradeableT.sol:28"
+          },
+          {
+            "label": "royaltyFeeSigner",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "NftExchangeV2UpgradeableT",
+            "src": "contracts\\nftexchange\\NftExchangeV2UpgradeableT.sol:29"
+          },
+          {
+            "label": "platformFee",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_uint256",
+            "contract": "NftExchangeV2UpgradeableT",
+            "src": "contracts\\nftexchange\\NftExchangeV2UpgradeableT.sol:30"
+          },
+          {
+            "label": "versionDomain",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_string_storage",
+            "contract": "NftExchangeV2UpgradeableT",
+            "src": "contracts\\nftexchange\\NftExchangeV2UpgradeableT.sol:31"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_string_storage": {
+            "label": "string",
             "numberOfBytes": "32"
           },
           "t_uint256": {
