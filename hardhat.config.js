@@ -17,10 +17,15 @@ module.exports = {
     },
   },
   networks: {
+    mainnet: {
+      url: process.env.ALCHEMY_MAINNET_URL,
+      chainId: 1,
+      accounts: [process.env.ygnftownerETHMAIN],
+    },
     goerli: {
       url: process.env.ALCHEMY_GOERLI_URL,
       chainId: 5,
-      accounts: [process.env.ygnftowner],
+      accounts: [process.env.ygnftOwner_TEST],
     },
     tbsc: {
       url: process.env.TBSC_URL,

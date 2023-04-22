@@ -44,6 +44,11 @@ abstract contract ExchangeDomainV1 {
         address verifyingContract;
     }
 
+    struct Call {
+        address target;
+        bytes callData;
+    }
+
     event Exchange(
         address indexed sellToken,
         uint256 indexed sellTokenId,
@@ -57,9 +62,4 @@ abstract contract ExchangeDomainV1 {
         uint256 payPrice,
         uint256 royaltyFee
     );
-    // Multi Call
-    struct Call {
-        address target;
-        bytes callData;
-    }
 }
