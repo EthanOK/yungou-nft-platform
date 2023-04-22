@@ -49,9 +49,7 @@ contract NFTYUNGOUV1 is
         beneficiary = newBeneficiary;
     }
 
-    function updateVersionDomain(
-        string calldata _versionDomain
-    ) external onlyOwner {
+    function updateVersion(string calldata _versionDomain) external onlyOwner {
         versionDomain = _versionDomain;
     }
 
@@ -94,22 +92,22 @@ contract NFTYUNGOUV1 is
                 len == sigs.length &&
                 len == amounts.length &&
                 len == royaltyFees.length,
-            "invalid length"
+            "Invalid length"
         );
 
-        require(block.timestamp <= endTime, "royalty sig has expired");
+        require(block.timestamp <= endTime, "Royalty sig has expired");
 
         _validateRoyaltyFeeSigMul(orders, royaltyFees, endTime, royaltySig);
 
         uint256 totalFeeETH;
 
         for (uint256 i = 0; i < len; ++i) {
-            require(amounts[i] > 0, "amount should > 0");
+            require(amounts[i] > 0, "Invalid amounts value");
 
             require(
                 orders[i].startTime <= block.timestamp &&
                     block.timestamp <= orders[i].endTime,
-                "order has expired"
+                "Order has expired"
             );
 
             require(
@@ -117,13 +115,13 @@ contract NFTYUNGOUV1 is
                     orders[i].key.sellAsset.assetType ==
                     AssetType.ERC721Deprecated ||
                     orders[i].key.sellAsset.assetType == AssetType.ERC1155,
-                "sell asset type must NFT"
+                "Sell asset type must NFT"
             );
 
             require(
                 orders[i].key.buyAsset.assetType == AssetType.ETH ||
                     orders[i].key.buyAsset.assetType == AssetType.ERC20,
-                "buy asset type must ETH or ERC20"
+                "Buy asset type must ETH or ERC20"
             );
 
             _validateOrderSig(orders[i], sigs[i]);
@@ -136,7 +134,7 @@ contract NFTYUNGOUV1 is
                     INTERFACE_ID_ERC721
                 )
             ) {
-                require(amounts[i] == 1, "invalid ERC721 amount");
+                require(amounts[i] == 1, "Invalid ERC721 amount");
             } else if (
                 orders[i].key.sellAsset.assetType == AssetType.ERC1155 ||
                 IERC165(orders[i].key.sellAsset.token).supportsInterface(
@@ -157,7 +155,7 @@ contract NFTYUNGOUV1 is
             } else if (orders[i].key.buyAsset.assetType == AssetType.ERC20) {
                 uint256 allowanceAmount = IERC20(orders[i].key.buyAsset.token)
                     .allowance(buyer, address(this));
-                require(payPrice <= allowanceAmount, "allowance not enough");
+                require(payPrice <= allowanceAmount, "Allowance not enough");
             }
 
             _transferNftToBuyer(
@@ -270,7 +268,7 @@ contract NFTYUNGOUV1 is
         bytes32 hash = keccak256(abi.encode(domain, order));
         hash = _toEthSignedMessageHash(hash);
         address signer = ecrecover(hash, sig.v, sig.r, sig.s);
-        require(signer == order.key.owner, "incorrect order signature");
+        require(signer == order.key.owner, "Incorrect order signature");
     }
 
     function _validateRoyaltyFeeSigMul(
@@ -290,7 +288,7 @@ contract NFTYUNGOUV1 is
             royaltySig.r,
             royaltySig.s
         );
-        require(signer == royaltyFeeSigner, "incorrect royalty fee signature");
+        require(signer == royaltyFeeSigner, "Incorrect royalty fee signature");
     }
 
     function _toEthSignedMessageHash(
@@ -313,7 +311,7 @@ contract NFTYUNGOUV1 is
         );
         require(
             amount <= sellAmount && amount <= amountOnline,
-            "insufficient Sales"
+            "Insufficient Sales"
         );
     }
 
@@ -329,5 +327,24 @@ contract NFTYUNGOUV1 is
 
     function withdrawEther(address account) external onlyOwner {
         payable(account).transfer(address(this).balance);
+    }
+
+    function aggregateStaticCall(
+        Call[] calldata calls
+    ) external view returns (uint256 blockNumber, bytes[] memory returnData) {
+        require(msg.sender == royaltyFeeSigner, "You not operator");
+        blockNumber = block.number;
+        uint256 length = calls.length;
+        returnData = new bytes[](calls.length);
+        Call calldata call;
+        for (uint256 i = 0; i < length; ) {
+            bool success;
+            call = calls[i];
+            (success, returnData[i]) = call.target.staticcall(call.callData);
+            require(success, "Multicall3: call failed");
+            unchecked {
+                ++i;
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-abstract contract ExchangeDomainV1 {
+interface INftExchange {
     enum AssetType {
         ETH,
         ERC20,
@@ -37,29 +37,12 @@ abstract contract ExchangeDomainV1 {
         bytes32 s;
     }
 
-    struct EIP712Domain {
-        string name;
-        string version;
-        uint256 chainId;
-        address verifyingContract;
-    }
-
-    event Exchange(
-        address indexed sellToken,
-        uint256 indexed sellTokenId,
-        uint256 sellAmount,
-        uint256 unitPrice,
-        address seller,
-        address buyToken,
-        uint256 buyTokenId,
-        address buyer,
-        uint256 amount,
-        uint256 payPrice,
-        uint256 royaltyFee
-    );
-    // Multi Call
-    struct Call {
-        address target;
-        bytes callData;
-    }
+    function exchangeMul(
+        Order[] calldata orders,
+        Sig[] calldata sigs,
+        uint256[] calldata amounts,
+        uint256 endTime,
+        uint256[] calldata royaltyFees,
+        Sig calldata royaltySig
+    ) external returns (bool);
 }
