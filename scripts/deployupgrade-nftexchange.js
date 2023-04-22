@@ -20,3 +20,5 @@ main();
 // npx hardhat run scripts/deployupgrade-nftexchange.js --network goerli
 
 // npx hardhat verify --network goerli 0xc5c7Aa5d20212Cc795F606fA859Beb8626A6c742
+// npx hardhat run scripts/deployupgrade-nftexchange.js --network mainnet
+// npx hardhat verify --network mainnet 0x93B161cE690251f629CEaE8cA1F69ab29e3EB77B

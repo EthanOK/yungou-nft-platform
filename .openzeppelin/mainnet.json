@@ -1,0 +1,164 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0xC07d62085Ea1A66De2377E12A49E2410203d0a46",
+    "txHash": "0x137687760694d46edad0fa4a6128da1d98e4b4b63a79fdb5fe1c0178eb835f96"
+  },
+  "proxies": [
+    {
+      "address": "0x8e319966F56E79C952C27C3991684E7e9B08Cd54",
+      "txHash": "0x50d9bb66891111242d7b4dc137c83839ba6a686a45543cf30094ba563226f545",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "9e2d17be63ceda5573a5d7096b68cd1be3e4090f3438a64175f5f2cfaee3c125": {
+      "address": "0x93B161cE690251f629CEaE8cA1F69ab29e3EB77B",
+      "txHash": "0x72a5b8e6f2b733751bc9fa00ad90aac3ffa6aac8da25daf277a372574345b894",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:80"
+          },
+          {
+            "label": "beneficiary",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_address_payable",
+            "contract": "NFTYUNGOUV1",
+            "src": "contracts\\nftexchange-main\\NFTYUNGOUV1.sol:28"
+          },
+          {
+            "label": "royaltyFeeSigner",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "NFTYUNGOUV1",
+            "src": "contracts\\nftexchange-main\\NFTYUNGOUV1.sol:29"
+          },
+          {
+            "label": "platformFee",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_uint256",
+            "contract": "NFTYUNGOUV1",
+            "src": "contracts\\nftexchange-main\\NFTYUNGOUV1.sol:30"
+          },
+          {
+            "label": "versionDomain",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_string_storage",
+            "contract": "NFTYUNGOUV1",
+            "src": "contracts\\nftexchange-main\\NFTYUNGOUV1.sol:31"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    }
+  }
+}
