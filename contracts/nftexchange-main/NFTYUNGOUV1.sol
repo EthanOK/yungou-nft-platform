@@ -243,7 +243,6 @@ contract NFTYUNGOUV1 is
 
         if (assertType == AssetType.ETH) {
             payable(toAccount).transfer(actualPrice);
-            // payable(beneficiary).transfer(totalFee);
             totalFeeETH = totalFee;
         } else if (assertType == AssetType.ERC20) {
             IERC20(erc20Address).safeTransferFrom(
