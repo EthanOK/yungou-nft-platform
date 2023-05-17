@@ -2,7 +2,7 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-  const exchange = await ethers.getContractFactory("NFTYUNGOUV1");
+  const exchange = await ethers.getContractFactory("NFTYUNGOUV1_0_0");
   const proxy = await upgrades.deployProxy(exchange, [
     "0x20B04Ce868A6FD40F7df2B89AeEFaD18873ba444",
     "0x0dD31386ebAf3D17FE65B73D683753b83d305bbb",

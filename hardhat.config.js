@@ -3,6 +3,7 @@ require("dotenv").config();
 require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
+require("hardhat-gas-reporter");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -25,7 +26,7 @@ module.exports = {
     goerli: {
       url: process.env.ALCHEMY_GOERLI_URL,
       chainId: 5,
-      accounts: [process.env.ygnftOwner_TEST],
+      accounts: [process.env.PRIVATE_KEY],
     },
     tbsc: {
       url: process.env.TBSC_URL,
@@ -52,5 +53,10 @@ module.exports = {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
+  },
+  gasReporter: {
+    enabled: true,
+    currency: "USDT",
+    gasPrice: 1,
   },
 };
