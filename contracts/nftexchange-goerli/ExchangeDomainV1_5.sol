@@ -50,11 +50,8 @@ abstract contract ExchangeDomainV1_5 {
     event Exchange(
         address indexed offerToken,
         uint256 indexed offerTokenId,
-        uint256 sellAmount,
-        uint256 unitPrice,
+        BasicOrderParameters parameters,
         address offerer,
-        address paymentToken,
-        uint256 paymentTokenId,
         address buyer,
         uint256 buyAmount,
         uint256 totalPayment,
