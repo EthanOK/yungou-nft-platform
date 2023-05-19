@@ -22,7 +22,6 @@ contract NFTYUNGOUV1_5 is
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
 
-    uint256 public constant FEE_10000 = 10000;
     string public constant NAME_YUNGOU = "YUNGOU";
     string public constant VERSION = "1.5";
 
@@ -31,7 +30,6 @@ contract NFTYUNGOUV1_5 is
 
     function initialize(address payable _beneficiary) public initializer {
         beneficiary = _beneficiary;
-
         __ReentrancyGuard_init();
         __Pausable_init();
         __Ownable_init();
@@ -61,6 +59,7 @@ contract NFTYUNGOUV1_5 is
             receiver = _msgSender();
         }
         uint256 valueETH = msg.value;
+
         uint256 currentTimestamp = block.timestamp;
 
         _validateOrder_ETH(
@@ -69,29 +68,20 @@ contract NFTYUNGOUV1_5 is
             order.buyAmount,
             currentTimestamp
         );
-
-        _validateOrderSignature(order.parameters, order.orderSignature);
-
-        _validateSystemSignature(
-            order.orderSignature,
-            order.buyAmount,
-            order.totalRoyaltyFee,
-            order.totalPlatformFee,
-            order.totalAfterTaxIncome,
-            order.totalPayment,
-            order.expiryDate,
-            order.systemSignature
-        );
+        _validateSignature(order, systemVerifier);
 
         require(valueETH >= order.totalPayment, "ETH insufficient");
+
         unchecked {
             uint256 totalFee = order.totalPlatformFee + order.totalRoyaltyFee;
+
             _excuteExchangeOrder(order, receiver, totalFee);
         }
 
         if (valueETH > order.totalPayment) {
             unchecked {
                 uint256 _amount = valueETH - order.totalPayment;
+
                 _transferETH(_msgSender(), _amount);
             }
         }
@@ -107,6 +97,7 @@ contract NFTYUNGOUV1_5 is
             receiver = _msgSender();
         }
         uint256 valueETH = msg.value;
+
         uint256 currentTimestamp = block.timestamp;
 
         (uint256 totalFee, uint256 totalPayment) = _validateOrders(
@@ -121,6 +112,7 @@ contract NFTYUNGOUV1_5 is
         if (valueETH > totalPayment) {
             unchecked {
                 uint256 _amount = valueETH - totalPayment;
+
                 _transferETH(_msgSender(), _amount);
             }
         }
@@ -132,6 +124,7 @@ contract NFTYUNGOUV1_5 is
         BasicOrder[] calldata orders,
         uint256 currentTimestamp
     ) internal view returns (uint256 totalFee, uint256 totalPayment) {
+        address _systemVerifier = systemVerifier;
         for (uint i = 0; i < orders.length; i++) {
             _validateOrder_ETH(
                 orders[i].parameters,
@@ -140,21 +133,7 @@ contract NFTYUNGOUV1_5 is
                 currentTimestamp
             );
 
-            _validateOrderSignature(
-                orders[i].parameters,
-                orders[i].orderSignature
-            );
-
-            _validateSystemSignature(
-                orders[i].orderSignature,
-                orders[i].buyAmount,
-                orders[i].totalRoyaltyFee,
-                orders[i].totalPlatformFee,
-                orders[i].totalAfterTaxIncome,
-                orders[i].totalPayment,
-                orders[i].expiryDate,
-                orders[i].systemSignature
-            );
+            _validateSignature(orders[i], _systemVerifier);
 
             unchecked {
                 totalFee =
@@ -178,6 +157,7 @@ contract NFTYUNGOUV1_5 is
                 currentTimestamp <= parameters.endTime,
             "Order has expired"
         );
+
         require(currentTimestamp <= expiryDate, "system signature has expired");
 
         if (parameters.orderType == OrderType.ETH_TO_ERC721) {
@@ -189,13 +169,25 @@ contract NFTYUNGOUV1_5 is
         }
     }
 
-    // bytes orderSignature;
-    // uint256 buyAmount;
-    // uint256 totalRoyaltyFee;
-    // uint256 totalPlatformFee;
-    // uint256 totalAfterTaxIncome;
-    // uint256 totalPayment;
-    // uint256 expiryDate;
+    function _validateSignature(
+        BasicOrder calldata order,
+        address _systemVerifier
+    ) internal view {
+        _validateOrderSignature(order.parameters, order.orderSignature);
+
+        _validateSystemSignature(
+            order.orderSignature,
+            order.buyAmount,
+            order.totalRoyaltyFee,
+            order.totalPlatformFee,
+            order.totalAfterTaxIncome,
+            order.totalPayment,
+            order.expiryDate,
+            order.systemSignature,
+            _systemVerifier
+        );
+    }
+
     function _validateSystemSignature(
         bytes calldata orderSignature,
         uint256 buyAmount,
@@ -204,8 +196,9 @@ contract NFTYUNGOUV1_5 is
         uint256 totalAfterTaxIncome,
         uint256 totalPayment,
         uint256 expiryDate,
-        bytes calldata systemSignature
-    ) internal view {
+        bytes calldata systemSignature,
+        address _systemVerifier
+    ) internal pure {
         bytes32 hash = keccak256(
             abi.encode(
                 orderSignature,
@@ -222,7 +215,7 @@ contract NFTYUNGOUV1_5 is
 
         address signer = hash.recover(systemSignature);
 
-        require(signer == systemVerifier, "Incorrect system signature");
+        require(signer == _systemVerifier, "Incorrect system signature");
     }
 
     function _validateOrderSignature(
@@ -268,10 +261,10 @@ contract NFTYUNGOUV1_5 is
         _transferETH(order.parameters.offerer, order.totalAfterTaxIncome);
 
         emit Exchange(
+            order.parameters.offerer,
             order.parameters.offerToken,
             order.parameters.offerTokenId,
             order.parameters,
-            order.parameters.offerer,
             receiver,
             order.buyAmount,
             order.totalPayment,
@@ -305,10 +298,10 @@ contract NFTYUNGOUV1_5 is
             );
 
             emit Exchange(
+                orders[i].parameters.offerer,
                 orders[i].parameters.offerToken,
                 orders[i].parameters.offerTokenId,
                 orders[i].parameters,
-                orders[i].parameters.offerer,
                 receiver,
                 orders[i].buyAmount,
                 orders[i].totalPayment,
