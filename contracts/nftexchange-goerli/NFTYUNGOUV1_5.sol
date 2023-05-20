@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 import "./ExchangeDomainV1_5.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract NFTYUNGOUV1_5 is
+contract YUNGOU_1_5 is
     ExchangeDomainV1_5,
     Initializable,
     PausableUpgradeable,
@@ -28,8 +28,12 @@ contract NFTYUNGOUV1_5 is
     address payable private beneficiary;
     address private systemVerifier;
 
-    function initialize(address payable _beneficiary) public initializer {
+    function initialize(
+        address payable _beneficiary,
+        address _systemVerifier
+    ) public initializer {
         beneficiary = _beneficiary;
+        systemVerifier = _systemVerifier;
         __ReentrancyGuard_init();
         __Pausable_init();
         __Ownable_init();
@@ -68,6 +72,7 @@ contract NFTYUNGOUV1_5 is
             order.buyAmount,
             currentTimestamp
         );
+
         _validateSignature(order, systemVerifier);
 
         require(valueETH >= order.totalPayment, "ETH insufficient");

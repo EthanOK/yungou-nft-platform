@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 abstract contract ExchangeDomainV1_5 {
     enum OrderType {
@@ -40,7 +40,6 @@ abstract contract ExchangeDomainV1_5 {
         bytes systemSignature;
     }
 
-    // TODO:remove version
     struct EIP712Domain {
         string name;
         uint256 chainId;
