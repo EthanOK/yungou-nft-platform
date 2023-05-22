@@ -43,8 +43,16 @@ contract YUNGOU_1_5 is
         beneficiary = newBeneficiary;
     }
 
+    function setSystemVerifier(address _systemVerifier) external onlyOwner {
+        systemVerifier = _systemVerifier;
+    }
+
     function getBeneficiary() external view returns (address) {
         return beneficiary;
+    }
+
+    function getSystemVerifier() external view returns (address) {
+        return systemVerifier;
     }
 
     function setPause() external onlyOwner {
@@ -70,7 +78,8 @@ contract YUNGOU_1_5 is
             order.parameters,
             order.expiryDate,
             order.buyAmount,
-            currentTimestamp
+            currentTimestamp,
+            order.totalPayment
         );
 
         _validateSignature(order, systemVerifier);
@@ -87,7 +96,7 @@ contract YUNGOU_1_5 is
             unchecked {
                 uint256 _amount = valueETH - order.totalPayment;
 
-                _transferETH(_msgSender(), _amount);
+                _transferETH(receiver, _amount);
             }
         }
 
@@ -118,7 +127,7 @@ contract YUNGOU_1_5 is
             unchecked {
                 uint256 _amount = valueETH - totalPayment;
 
-                _transferETH(_msgSender(), _amount);
+                _transferETH(receiver, _amount);
             }
         }
 
@@ -128,14 +137,15 @@ contract YUNGOU_1_5 is
     function _validateOrders(
         BasicOrder[] calldata orders,
         uint256 currentTimestamp
-    ) internal view returns (uint256 totalFee, uint256 totalPayment) {
+    ) internal view returns (uint256 totalFee, uint256 totalPayment_orders) {
         address _systemVerifier = systemVerifier;
         for (uint i = 0; i < orders.length; i++) {
             _validateOrder_ETH(
                 orders[i].parameters,
                 orders[i].expiryDate,
                 orders[i].buyAmount,
-                currentTimestamp
+                currentTimestamp,
+                orders[i].totalPayment
             );
 
             _validateSignature(orders[i], _systemVerifier);
@@ -146,7 +156,9 @@ contract YUNGOU_1_5 is
                     orders[i].totalRoyaltyFee +
                     orders[i].totalPlatformFee;
 
-                totalPayment = totalPayment + orders[i].totalPayment;
+                totalPayment_orders =
+                    totalPayment_orders +
+                    orders[i].totalPayment;
             }
         }
     }
@@ -155,7 +167,8 @@ contract YUNGOU_1_5 is
         BasicOrderParameters calldata parameters,
         uint256 expiryDate,
         uint256 buyAmount,
-        uint256 currentTimestamp
+        uint256 currentTimestamp,
+        uint256 totalPayment_order
     ) internal pure {
         require(
             parameters.startTime <= currentTimestamp &&
@@ -163,7 +176,7 @@ contract YUNGOU_1_5 is
             "Order has expired"
         );
 
-        require(currentTimestamp <= expiryDate, "system signature has expired");
+        require(currentTimestamp <= expiryDate, "System signature has expired");
 
         if (parameters.orderType == OrderType.ETH_TO_ERC721) {
             require(buyAmount == 1 && parameters.sellAmount == 1);
@@ -171,6 +184,13 @@ contract YUNGOU_1_5 is
             require(buyAmount > 0 && buyAmount <= parameters.sellAmount);
         } else {
             revert("Incorrect buyAmount");
+        }
+
+        unchecked {
+            require(
+                totalPayment_order == (buyAmount * parameters.unitPrice),
+                "Incorrect order's totalPayment"
+            );
         }
     }
 
@@ -345,7 +365,7 @@ contract YUNGOU_1_5 is
         payable(account).transfer(payAmount);
     }
 
-    function withdrawEther(address account) external onlyOwner {
+    function withdrawETH(address account) external onlyOwner {
         payable(account).transfer(address(this).balance);
     }
 }
