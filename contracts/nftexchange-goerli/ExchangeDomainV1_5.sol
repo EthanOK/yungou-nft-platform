@@ -23,6 +23,7 @@ abstract contract ExchangeDomainV1_5 {
         uint256 endTime;
         address paymentToken;
         uint256 paymentTokenId;
+        uint256 salt;
         uint256 royaltyFee;
         uint256 platformFee;
         uint256 afterTaxPrice;
