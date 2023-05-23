@@ -279,11 +279,13 @@ contract YUNGOU_1_5 is
             order.buyAmount
         );
 
-        // transfer total Fee
-        _transferETH(beneficiary, totalFee);
-
         // transfer After-Tax income to offerer
         _transferETH(order.parameters.offerer, order.totalAfterTaxIncome);
+
+        if (totalFee > 0) {
+            // transfer total Fee
+            _transferETH(beneficiary, totalFee);
+        }
 
         emit Exchange(
             order.parameters.offerer,
@@ -303,9 +305,6 @@ contract YUNGOU_1_5 is
         address receiver,
         uint256 totalFee
     ) internal {
-        // transfer total Fee
-        _transferETH(beneficiary, totalFee);
-
         for (uint256 i = 0; i < orders.length; ++i) {
             _transferNftToBuyer(
                 orders[i].parameters.orderType,
@@ -333,6 +332,11 @@ contract YUNGOU_1_5 is
                 orders[i].totalRoyaltyFee,
                 orders[i].totalPlatformFee
             );
+        }
+
+        if (totalFee > 0) {
+            // transfer total Fee
+            _transferETH(beneficiary, totalFee);
         }
     }
 
