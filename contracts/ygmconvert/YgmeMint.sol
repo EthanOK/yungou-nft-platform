@@ -53,7 +53,7 @@ contract YgmeMint is Ownable, ReentrancyGuard {
 
     // TODO: main
     // _usdt 0xdAC17F958D2ee523a2206206994597C13D831ec7
-    // _ygme 0xdAC17F958D2ee523a2206206994597C13D831ec7
+    // _ygme 0x1b489201D974D37DDd2FaF6756106a7651914A63
     // _ygmestake 0xdAC17F958D2ee523a2206206994597C13D831ec7
     // _ygio 0x19C996c4E4596aADDA9b7756B34bBa614376FDd4
     // TODO: Goerli
