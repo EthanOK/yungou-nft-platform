@@ -348,20 +348,22 @@ contract YUNGOU_1_5 is
         uint256 offerTokenId,
         uint256 amount
     ) internal {
-        if (orderType == OrderType.ETH_TO_ERC721) {
-            IERC721(offerToken).transferFrom(
-                fromAccount,
-                toAccount,
-                offerTokenId
-            );
-        } else if (orderType == OrderType.ETH_TO_ERC1155) {
-            IERC1155(offerToken).safeTransferFrom(
-                fromAccount,
-                toAccount,
-                offerTokenId,
-                amount,
-                "0x"
-            );
+        if (fromAccount != toAccount) {
+            if (orderType == OrderType.ETH_TO_ERC721) {
+                IERC721(offerToken).transferFrom(
+                    fromAccount,
+                    toAccount,
+                    offerTokenId
+                );
+            } else if (orderType == OrderType.ETH_TO_ERC1155) {
+                IERC1155(offerToken).safeTransferFrom(
+                    fromAccount,
+                    toAccount,
+                    offerTokenId,
+                    amount,
+                    "0x"
+                );
+            }
         }
     }
 
