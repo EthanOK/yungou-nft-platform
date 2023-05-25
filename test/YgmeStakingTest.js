@@ -1,6 +1,5 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
-
 describe("YgmeStaking", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -10,11 +9,17 @@ describe("YgmeStaking", function () {
     const [owner, otherAccount, signer] = await ethers.getSigners();
 
     const YGIO = await ethers.getContractFactory("YGIO");
-    const ygio = await YGIO.deploy();
+    const ygio = await YGIO.deploy([
+      signer.address,
+      signer.address,
+      owner.address,
+      otherAccount.address,
+      signer.address,
+    ]);
     await ygio.deployed();
 
     const YGME = await ethers.getContractFactory("YGME");
-    const ygme = await YGME.deploy();
+    const ygme = await YGME.deploy(signer.address, signer.address);
     await ygme.deployed();
 
     const YgmeStaking = await ethers.getContractFactory("YgmeStaking");
@@ -29,7 +34,8 @@ describe("YgmeStaking", function () {
     );
     await ygmes.deployed();
 
-    let amount = (await ygio.balanceOf(owner.address)) / 2;
+    let amount = await ygio.balanceOf(owner.address);
+
     await ygio.transfer(ygmes.address, amount);
 
     return { ygio, ygme, ygmes, owner, otherAccount, signer };
@@ -55,16 +61,20 @@ describe("YgmeStaking", function () {
       let [encodedData, hashData] = await getEncodedDataAndhashData(
         1,
         otherAccount.address,
-        10000000
+        "20000000000000000000000000"
       );
 
       const signature = await getSignature(hashData, signer);
       ygmes = ygmes.connect(otherAccount);
 
       console.log("balanceOf(ygmes):" + (await ygio.balanceOf(ygmes.address)));
+      console.log(
+        "balanceOf(otherAccount):" +
+          (await ygio.balanceOf(otherAccount.address))
+      );
 
       await ygmes.withdrawERC20(encodedData, signature);
-
+      console.log("withdrawERC20:");
       console.log(
         "balanceOf(otherAccount):" +
           (await ygio.balanceOf(otherAccount.address))

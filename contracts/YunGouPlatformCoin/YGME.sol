@@ -60,7 +60,7 @@ contract YGME is ERC721, Ownable {
     string public baseUri;
     string public orgUri;
 
-    constructor(address pay, address reward) ERC721("YGME_T", "YGME") {
+    constructor(address pay, address reward) ERC721("YGME", "YGME") {
         payCon = IERC20USDT(pay);
 
         rewardCon = IERC20(reward);
