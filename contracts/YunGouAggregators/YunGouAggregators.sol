@@ -2,11 +2,10 @@
 pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MarketRegistry.sol";
 
-contract YunGouAggregators is Ownable, Pausable, ReentrancyGuard {
+contract YunGouAggregators is Ownable, ReentrancyGuard {
     bytes4 constant SELECTOR_TRANSFERFROM_ERC20_SELECTOR = 0x23b872dd;
     bytes4 constant SELECTOR_TRANSFER_ERC20_SELECTOR = 0xa9059cbb;
 
