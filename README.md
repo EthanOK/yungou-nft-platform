@@ -10,19 +10,23 @@ npm install --save-dev @nomiclabs/hardhat-etherscan
 npm install --save-dev hardhat-contract-sizer
 ```
 
-npx hardhat verify --network goerli `contractAddress`
-
 Try running some of the following tasks:
 
 ```shell
 npx hardhat help
+
 npx hardhat test
-REPORT_GAS=true npx hardhat test
+
 npx hardhat node
+
 npx hardhat run scripts/deploy.js
+
+npx hardhat verify --network goerli `contractAddress`
 ```
 
 # YUNGOU Contracts
+
+ETH MainNet
 
 ## 一、YUNGUO Platform Coin
 
@@ -47,3 +51,21 @@ https://etherscan.io/address/0x3db8480963a9333a7cda5338c9924e662f743170
 ### 2.YGME Staking
 
 https://etherscan.io/address/0x1981f583D723bcbe7A0b41854afaDf7Fc287f11C
+
+### 3.YGME Mint
+
+https://etherscan.io/address/0xC1AE723ad98Af4E2D6EF3e384CBCD9CF4CeF8730
+
+## 三、NFT Exchange Platform
+
+## 1.YUNGOU 1.0
+
+1. UpgradeableProxy：
+
+https://etherscan.io/address/0x8e319966F56E79C952C27C3991684E7e9B08Cd54
+
+2. implementation contract：
+
+https://etherscan.io/address/0x93b161ce690251f629ceae8ca1f69ab29e3eb77b#code
+
+## 2.
