@@ -26,26 +26,22 @@ contract YunGouAggregators is Ownable, Pausable, ReentrancyGuard {
 
     MarketRegistry public marketRegistry;
     address public converter;
+    bool public withERC20sSwitch;
 
     function setConverter(address _converter) external onlyOwner {
         converter = _converter;
     }
 
-    function setPause() external onlyOwner {
-        if (!paused()) {
-            _pause();
-        } else {
-            _unpause();
-        }
+    function setRewardSwitch() external onlyOwner {
+        withERC20sSwitch = !withERC20sSwitch;
     }
 
     constructor(address _marketRegistry) {
         marketRegistry = MarketRegistry(_marketRegistry);
-        _pause();
     }
 
     function batchBuyWithETH(
-        MarketRegistry.TradeDetails[] memory tradeDetails
+        MarketRegistry.TradeDetails[] calldata tradeDetails
     ) external payable nonReentrant {
         // execute trades
         _trade(tradeDetails);
@@ -67,7 +63,7 @@ contract YunGouAggregators is Ownable, Pausable, ReentrancyGuard {
     }
 
     function _trade(
-        MarketRegistry.TradeDetails[] memory _tradeDetails
+        MarketRegistry.TradeDetails[] calldata _tradeDetails
     ) internal {
         for (uint256 i = 0; i < _tradeDetails.length; i++) {
             // get market details
@@ -98,11 +94,13 @@ contract YunGouAggregators is Ownable, Pausable, ReentrancyGuard {
     }
 
     function batchBuyWithERC20s(
-        ERC20Details memory erc20Details,
-        MarketRegistry.TradeDetails[] memory tradeDetails,
-        ConverstionDetails[] memory converstionDetails,
-        address[] memory dustTokens
-    ) external payable whenNotPaused nonReentrant {
+        ERC20Details calldata erc20Details,
+        MarketRegistry.TradeDetails[] calldata tradeDetails,
+        ConverstionDetails[] calldata converstionDetails,
+        address[] calldata dustTokens
+    ) external payable nonReentrant {
+        require(withERC20sSwitch, "ERC20s Switch is Off");
+
         // transfer ERC20 tokens from the sender to this contract
         for (uint256 i = 0; i < erc20Details.tokenAddrs.length; i++) {
             (bool success, ) = erc20Details.tokenAddrs[i].call(

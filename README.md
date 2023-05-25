@@ -58,7 +58,7 @@ https://etherscan.io/address/0xC1AE723ad98Af4E2D6EF3e384CBCD9CF4CeF8730
 
 ## 三、NFT Exchange Platform
 
-## 1.YUNGOU 1.0
+## 1.YUNGOU Exchange 1.0
 
 1. UpgradeableProxy：
 
@@ -68,6 +68,10 @@ https://etherscan.io/address/0x8e319966F56E79C952C27C3991684E7e9B08Cd54
 
 https://etherscan.io/address/0x93b161ce690251f629ceae8ca1f69ab29e3eb77b#code
 
-## 2.YUNGOU 2.0
+## 2.YUNGOU Exchange 2.0
 
-## 3.YUNGOU 2.0
+## 3.YunGouAggregators
+
+1. MarketRegistry
+
+2. YunGouAggregators
