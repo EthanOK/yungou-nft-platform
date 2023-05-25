@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "./ExchangeDomainV1_5.sol";
+import "./YunGouDomain.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,8 +12,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract YUNGOU_1_5 is
-    ExchangeDomainV1_5,
+contract YunGou is
+    YunGouDomain,
     Initializable,
     PausableUpgradeable,
     OwnableUpgradeable,
@@ -23,7 +23,7 @@ contract YUNGOU_1_5 is
     using ECDSA for bytes32;
 
     string public constant NAME_YUNGOU = "YUNGOU";
-    string public constant VERSION = "1.5";
+    string public constant VERSION = "2.0";
 
     address payable private beneficiary;
     address private systemVerifier;

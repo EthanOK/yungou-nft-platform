@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-abstract contract ExchangeDomainV1_5 {
+abstract contract YunGouDomain {
     enum OrderType {
         ETH_TO_ERC721,
         ETH_TO_ERC1155,
