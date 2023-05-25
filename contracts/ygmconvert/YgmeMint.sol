@@ -51,16 +51,8 @@ contract YgmeMint is Ownable, ReentrancyGuard {
 
     bool public rewardSwitch;
 
-    // TODO: main
-    // _usdt 0xdAC17F958D2ee523a2206206994597C13D831ec7
-    // _ygme 0x1b489201D974D37DDd2FaF6756106a7651914A63
-    // _ygmestake 0xdAC17F958D2ee523a2206206994597C13D831ec7
-    // _ygio 0x19C996c4E4596aADDA9b7756B34bBa614376FDd4
-    // TODO: Goerli
-    // _usdt 0x965A558b312E288F5A77F851F7685344e1e73EdF
-    // _ygme 0x28d1bc817de02c9f105a6986ef85cb04863c3042
-    // _ygmestake 0xEF6B5e06D3ED692729a01a7F471D386677943C85
-    // _ygio 0xd042eF5cF97c902bF8F53244F4a81ec4f8E465Ab
+    bool public mintSwitch;
+
     constructor(
         address _usdt,
         address _ygme,
@@ -77,13 +69,26 @@ contract YgmeMint is Ownable, ReentrancyGuard {
         rewardSwitch = !rewardSwitch;
     }
 
+    function setMintSwitch() external onlyOwner {
+        mintSwitch = !mintSwitch;
+    }
+
     function safeMint(
         address _recommender,
         uint256 mintNum
     ) external nonReentrant {
         address account = _msgSender();
 
-        require(_recommender != ZERO_ADDRESS, "recommender can not be zero");
+        address superAddress = ygme.recommender(account);
+
+        if (superAddress != ZERO_ADDRESS) {
+            _recommender = superAddress;
+        } else {
+            require(
+                _recommender != ZERO_ADDRESS,
+                "recommender can not be zero"
+            );
+        }
 
         require(_recommender != account, "recommender can not be self");
 
@@ -92,6 +97,27 @@ contract YgmeMint is Ownable, ReentrancyGuard {
                 ygmestake.getStakingTokenIds(_recommender).length > 0,
             "invalid recommender"
         );
+
+        uint256 unitPrice = ygme.PAY();
+
+        usdt.transferFrom(account, address(ygme), mintNum * unitPrice);
+
+        ygme.swap(account, _recommender, mintNum);
+
+        if (rewardSwitch) {
+            _rewardMint(account, mintNum);
+        }
+    }
+
+    function safeMintTwo(
+        address _recommender,
+        uint256 mintNum
+    ) external nonReentrant {
+        require(mintSwitch, "method invalid");
+
+        address account = _msgSender();
+
+        require(_recommender != account, "recommender can not be self");
 
         uint256 unitPrice = ygme.PAY();
 
