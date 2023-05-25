@@ -1,7 +1,7 @@
 {
-  "name": "yungounftdex",
-  "version": "1.0.0",
-  "description": "nft dex",
+  "name": "yungou",
+  "version": "2.0",
+  "description": "nft dex platform",
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",
@@ -10,7 +10,7 @@
     "node": "npx hardhat node",
     "deploy": "npx hardhat run scripts/deploy.js --network localhost"
   },
-  "author": "yg",
+  "author": "yg_dev",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
