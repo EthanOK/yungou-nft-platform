@@ -46,12 +46,10 @@ abstract contract YunGouDomain {
         uint256 chainId;
         address verifyingContract;
     }
-
     event Exchange(
         address indexed offerer,
         address indexed offerToken,
         uint256 indexed offerTokenId,
-        BasicOrderParameters parameters,
         address buyer,
         uint256 buyAmount,
         uint256 totalPayment,
