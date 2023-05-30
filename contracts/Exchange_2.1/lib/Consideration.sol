@@ -93,7 +93,7 @@ abstract contract Consideration is Validator, Executor {
         return (version, domainSeparator);
     }
 
-    function _name() internal pure returns (string memory /* contractName */) {
+    function _name() internal pure returns (string memory) {
         // Return the name of the contract.
         return NAME_YUNGOU;
     }
