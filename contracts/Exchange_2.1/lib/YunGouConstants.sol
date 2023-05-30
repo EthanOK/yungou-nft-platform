@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-string constant NAME_YUNGOU = "YUNGOU";
+string constant NAME_YUNGOU = "YunGou";
 
 string constant VERSION = "2.0";
 

@@ -32,7 +32,7 @@ contract YunGou2_1 is Consideration {
         return beneficiary;
     }
 
-    function getSystemVerifier() external view returns (address) {
+    function getSystemVerifier() external view onlyOwner returns (address) {
         return systemVerifier;
     }
 
