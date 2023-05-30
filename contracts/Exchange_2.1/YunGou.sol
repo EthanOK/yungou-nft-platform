@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./lib/Consideration.sol";
 
-contract YunGou2_1 is Consideration {
+contract YunGou is Consideration {
     address payable private beneficiary;
     address private systemVerifier;
 

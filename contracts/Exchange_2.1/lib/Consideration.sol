@@ -3,7 +3,6 @@ pragma solidity ^0.8.18;
 
 import "./Executor.sol";
 import "./Validator.sol";
-import {BasicOrderParameters, BasicOrder, OrderType} from "./YunGouStructsAndEnums.sol";
 
 abstract contract Consideration is Validator, Executor {
     function _excuteWithETH(

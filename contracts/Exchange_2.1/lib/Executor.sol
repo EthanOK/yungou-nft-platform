@@ -2,9 +2,9 @@
 pragma solidity ^0.8.18;
 
 import "../interfaces/YunGouInterface.sol";
-import {BasicOrderParameters, BasicOrder, OrderType} from "./YunGouStructsAndEnums.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {BasicOrderParameters, BasicOrder, OrderType} from "./YunGouStructsAndEnums.sol";
 
 abstract contract Executor is YunGouInterface {
     function _excuteExchangeOrder(
