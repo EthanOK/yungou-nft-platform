@@ -70,7 +70,7 @@ contract YunGou2_1 is Consideration {
         return result;
     }
 
-    function name() external pure returns (string memory /* contractName */) {
+    function name() external pure returns (string memory contractName) {
         // Return the name of the contract.
         return _name();
     }
@@ -81,5 +81,11 @@ contract YunGou2_1 is Consideration {
         returns (string memory version, bytes32 domainSeparator)
     {
         return _information();
+    }
+
+    function getOrderHash(
+        BasicOrderParameters calldata orderParameters
+    ) external view returns (bytes32 orderHash) {
+        return _getOrderHash(orderParameters);
     }
 }

@@ -134,14 +134,21 @@ abstract contract Validator is
         BasicOrderParameters calldata parameters,
         bytes calldata orderSignature
     ) internal view {
-        bytes32 hash = _hashTypedDataV4(
-            keccak256(abi.encode(BASICORDER_TYPE_HASH, parameters))
-        );
+        bytes32 hash = _getOrderHash(parameters);
 
         address signer = ECDSAUpgradeable.recover(hash, orderSignature);
 
         if (signer != parameters.offerer) {
             _revertIncorrectOrderSignature();
         }
+    }
+
+    function _getOrderHash(
+        BasicOrderParameters calldata parameters
+    ) internal view returns (bytes32 orderHash) {
+        return
+            _hashTypedDataV4(
+                keccak256(abi.encode(BASICORDER_TYPE_HASH, parameters))
+            );
     }
 }

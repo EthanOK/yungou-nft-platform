@@ -41,4 +41,8 @@ interface YunGouInterface {
         external
         view
         returns (string memory version, bytes32 domainSeparator);
+
+    function getOrderHash(
+        BasicOrderParameters calldata orderParameters
+    ) external view returns (bytes32 orderHash);
 }
