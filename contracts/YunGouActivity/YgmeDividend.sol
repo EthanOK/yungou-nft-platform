@@ -81,7 +81,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         bytes calldata data,
         bytes calldata signature
     ) external nonReentrant returns (bool) {
-        require(data.length > 0, "Invalid data");
+        require(data.length > 0 && signature.length > 0, "Invalid data");
 
         bytes32 hash = keccak256(data);
 
@@ -100,20 +100,17 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
 
         orderIsInvalid[orderId] = true;
 
-        // 0x0000000000000000000000000000000000000000
+        // address(0) = 0x0000000000000000000000000000000000000000
         if (coinAddress == address(0)) {
             // withdraw ETH
-            require(
-                address(this).balance >= amount,
-                "ETH Insufficient balance"
-            );
+            require(address(this).balance >= amount, "ETH Insufficient");
 
             payable(account).transfer(amount);
         } else {
             // withdraw ERC20
             require(
                 IERC20(coinAddress).balanceOf(address(this)) >= amount,
-                "ERC20 Insufficient balance"
+                "ERC20 Insufficient"
             );
 
             IERC20(coinAddress).safeTransfer(account, amount);
