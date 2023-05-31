@@ -10,9 +10,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
+    event Deposit(address indexed account, uint256 indexed amount);
+
     event Withdraw(
         uint256 indexed orderId,
-        address indexed withdrawContract,
+        address indexed coinAddress,
         address indexed account,
         uint256 amount
     );
@@ -37,6 +39,10 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         withdrawSigner = _withdrawSigner;
     }
 
+    function withdrawETHOnlyOwner(address account) external onlyOwner {
+        payable(account).transfer(address(this).balance);
+    }
+
     function getWithdrawSigner() external view onlyOwner returns (address) {
         return withdrawSigner;
     }
@@ -45,7 +51,33 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         return orderIsInvalid[orderId];
     }
 
-    // data = abi.encode(orderId, withdrawContract, account, amount)
+    function getETHBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function getERC20Balance(
+        address coinAddress
+    ) public view returns (uint256) {
+        return IERC20(coinAddress).balanceOf(address(this));
+    }
+
+    function getData(
+        uint256 orderId,
+        address coinAddress,
+        address account,
+        uint256 amount
+    ) external pure returns (bytes memory data) {
+        data = abi.encode(orderId, coinAddress, account, amount);
+    }
+
+    // data = abi.encode(orderId, coinAddress, account, amount)
+
+    function deposit() external payable returns (uint256 amount) {
+        amount = msg.value;
+        emit Deposit(msg.sender, amount);
+        return amount;
+    }
+
     function withdraw(
         bytes calldata data,
         bytes calldata signature
@@ -58,7 +90,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
 
         (
             uint256 orderId,
-            address withdrawContract,
+            address coinAddress,
             address account,
             uint256 amount
         ) = abi.decode(data, (uint256, address, address, uint256));
@@ -69,15 +101,26 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
 
         orderIsInvalid[orderId] = true;
 
-        if (withdrawContract == address(0)) {
+        // 0x0000000000000000000000000000000000000000
+        if (coinAddress == address(0)) {
             // withdraw ETH
+            require(
+                address(this).balance >= amount,
+                "ETH Insufficient balance"
+            );
+
             payable(account).transfer(amount);
         } else {
             // withdraw ERC20
-            IERC20(withdrawContract).safeTransfer(account, amount);
+            require(
+                IERC20(coinAddress).balanceOf(address(this)) >= amount,
+                "ERC20 Insufficient balance"
+            );
+
+            IERC20(coinAddress).safeTransfer(account, amount);
         }
 
-        emit Withdraw(orderId, withdrawContract, account, amount);
+        emit Withdraw(orderId, coinAddress, account, amount);
 
         return true;
     }
@@ -110,14 +153,18 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
             bytes32 r;
             bytes32 s;
             uint8 v;
+
             assembly {
                 r := mload(add(signature, 0x20))
                 s := mload(add(signature, 0x40))
                 v := byte(0, mload(add(signature, 0x60)))
             }
+
             signer = ecrecover(hash, v, r, s);
         } else {
             revert("Incorrect Signature Length");
         }
     }
+
+    receive() external payable {}
 }
