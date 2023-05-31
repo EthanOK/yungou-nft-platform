@@ -66,8 +66,9 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         address coinAddress,
         address account,
         uint256 amount
-    ) external pure returns (bytes memory data) {
+    ) external pure returns (bytes memory data, bytes32 hash) {
         data = abi.encode(orderId, coinAddress, account, amount);
+        hash = keccak256(data);
     }
 
     function deposit() external payable returns (uint256 amount) {
