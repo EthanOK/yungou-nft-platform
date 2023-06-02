@@ -61,6 +61,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         return IERC20(coinAddress).balanceOf(address(this));
     }
 
+    // TODO: ETH MainNet Remove
     function getData(
         uint256 orderId,
         address coinAddress,
