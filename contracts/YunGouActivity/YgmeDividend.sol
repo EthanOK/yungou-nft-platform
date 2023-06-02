@@ -93,7 +93,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
             uint256 endTime
         ) = abi.decode(data, (uint256, address, address, uint256, uint256));
 
-        require(block.timestamp < endTime, "signature expired");
+        require(block.timestamp < endTime, "Signature expired");
 
         require(!orderIsInvalid[orderId], "Invalid orderId");
 
@@ -179,7 +179,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         );
 
         (bool success, ) = target.call(data);
-        require(success, "low-level call failed");
+        require(success, "Low-level call failed");
     }
 
     receive() external payable {}
