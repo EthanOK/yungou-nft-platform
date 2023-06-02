@@ -82,10 +82,6 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
     ) external whenNotPaused nonReentrant returns (bool) {
         require(data.length > 0 && signature.length > 0, "Invalid data");
 
-        bytes32 hash = keccak256(data);
-
-        _verifySignature(hash, signature);
-
         (
             uint256 orderId,
             address coinAddress,
@@ -93,7 +89,12 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
             uint256 amount,
             uint256 endTime
         ) = abi.decode(data, (uint256, address, address, uint256, uint256));
+
         require(block.timestamp < endTime, "signature expired");
+
+        bytes32 hash = keccak256(data);
+
+        _verifySignature(hash, signature);
 
         require(!orderIsInvalid[orderId], "Invalid orderId");
 
