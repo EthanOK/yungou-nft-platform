@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
+contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
     event Deposit(address indexed account, uint256 indexed amount);
 
     event Withdraw(
