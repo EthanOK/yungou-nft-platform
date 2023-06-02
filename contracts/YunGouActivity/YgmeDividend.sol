@@ -5,11 +5,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
-
     event Deposit(address indexed account, uint256 indexed amount);
 
     event Withdraw(
@@ -114,7 +111,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
                 "ERC20 Insufficient"
             );
 
-            IERC20(coinAddress).safeTransfer(account, amount);
+            _transferLowCall(coinAddress, account, amount);
         }
 
         emit Withdraw(orderId, coinAddress, account, amount);
@@ -161,6 +158,21 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         } else {
             revert("Incorrect Signature Length");
         }
+    }
+
+    function _transferLowCall(
+        address target,
+        address to,
+        uint256 value
+    ) internal {
+        bytes memory data = abi.encodeWithSelector(
+            IERC20.transfer.selector,
+            to,
+            value
+        );
+
+        (bool success, ) = target.call(data);
+        require(success, "low-level call failed");
     }
 
     receive() external payable {}
