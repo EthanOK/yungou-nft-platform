@@ -78,7 +78,7 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
     function withdraw(
         bytes calldata data,
         bytes calldata signature
-    ) external nonReentrant returns (bool) {
+    ) external whenNotPaused nonReentrant returns (bool) {
         require(data.length > 0 && signature.length > 0, "Invalid data");
 
         bytes32 hash = keccak256(data);
