@@ -63,9 +63,10 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
         uint256 orderId,
         address coinAddress,
         address account,
-        uint256 amount
+        uint256 amount,
+        uint256 endTime
     ) external pure returns (bytes memory data, bytes32 hash) {
-        data = abi.encode(orderId, coinAddress, account, amount);
+        data = abi.encode(orderId, coinAddress, account, amount, endTime);
         hash = keccak256(data);
     }
 
@@ -89,8 +90,10 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
             uint256 orderId,
             address coinAddress,
             address account,
-            uint256 amount
-        ) = abi.decode(data, (uint256, address, address, uint256));
+            uint256 amount,
+            uint256 endTime
+        ) = abi.decode(data, (uint256, address, address, uint256, uint256));
+        require(block.timestamp < endTime, "signature expired");
 
         require(!orderIsInvalid[orderId], "Invalid orderId");
 
