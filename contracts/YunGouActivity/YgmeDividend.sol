@@ -92,13 +92,13 @@ contract YgmeDividend is Pausable, Ownable, ReentrancyGuard {
 
         require(block.timestamp < endTime, "signature expired");
 
-        bytes32 hash = keccak256(data);
-
-        _verifySignature(hash, signature);
-
         require(!orderIsInvalid[orderId], "Invalid orderId");
 
         require(account == _msgSender(), "Invalid account");
+
+        bytes32 hash = keccak256(data);
+
+        _verifySignature(hash, signature);
 
         orderIsInvalid[orderId] = true;
 
