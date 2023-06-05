@@ -16,6 +16,9 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
         uint256 amount
     );
 
+    // 0x0000000000000000000000000000000000000000
+    address constant ZERO_ADDRESS = address(0);
+
     address private withdrawSigner;
 
     mapping(uint256 => bool) private orderIsInvalid;
@@ -58,19 +61,6 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
         return IERC20(coinAddress).balanceOf(address(this));
     }
 
-    // TODO: ETH MainNet Remove
-    function getData(
-        uint256 orderId,
-        address coinAddress,
-        address account,
-        uint256 amount,
-        uint256 endTime
-    ) external pure returns (bytes memory data, bytes32 hash) {
-        data = abi.encode(orderId, coinAddress, account, amount, endTime);
-
-        hash = keccak256(data);
-    }
-
     function deposit() external payable returns (uint256 amount) {
         amount = msg.value;
 
@@ -105,8 +95,7 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
 
         orderIsInvalid[orderId] = true;
 
-        // address(0) = 0x0000000000000000000000000000000000000000
-        if (coinAddress == address(0)) {
+        if (coinAddress == ZERO_ADDRESS) {
             // withdraw ETH
             require(address(this).balance >= amount, "ETH Insufficient");
 
