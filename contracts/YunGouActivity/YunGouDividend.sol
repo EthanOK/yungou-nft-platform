@@ -18,6 +18,7 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
 
     // 0x0000000000000000000000000000000000000000
     address constant ZERO_ADDRESS = address(0);
+    bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
     address private withdrawSigner;
 
@@ -161,14 +162,13 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
         address to,
         uint256 value
     ) internal {
-        bytes memory data = abi.encodeWithSelector(
-            IERC20.transfer.selector,
-            to,
-            value
+        (bool success, bytes memory data) = target.call(
+            abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, to, value)
         );
-
-        (bool success, ) = target.call(data);
-        require(success, "Low-level call failed");
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "Low-level call failed"
+        );
     }
 
     receive() external payable {}
