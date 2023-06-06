@@ -56,6 +56,10 @@ https://etherscan.io/address/0x1981f583D723bcbe7A0b41854afaDf7Fc287f11C
 
 https://etherscan.io/address/0xC1AE723ad98Af4E2D6EF3e384CBCD9CF4CeF8730
 
+### 4.YunGou Dividend
+
+https://etherscan.io/address/0x4643b06debe49fce229a77ebc9e7c5c036b2cedc
+
 ## 三、NFT Exchange Platform
 
 ## 1.YUNGOU Exchange 1.0

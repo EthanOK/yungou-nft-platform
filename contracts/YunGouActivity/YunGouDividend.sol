@@ -18,6 +18,7 @@ contract YunGouDividend is Pausable, Ownable, ReentrancyGuard {
 
     // 0x0000000000000000000000000000000000000000
     address constant ZERO_ADDRESS = address(0);
+    // bytes4(keccak256("transfer(address,uint256)"))
     bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
     address private withdrawSigner;
