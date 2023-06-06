@@ -43,6 +43,12 @@ module.exports = {
       chainId: 11155111,
       accounts: [process.env.PRIVATE_KEY],
     },
+    hardhat: {
+      forking: {
+        url: process.env.ALCHEMY_MAINNET_URL,
+        blockNumber: 17419918,
+      },
+    },
   },
   etherscan: {
     // BSC_API_KEY ETHERSCAN_API_KEY MUMBAI_API_KEY
