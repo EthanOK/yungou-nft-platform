@@ -46,7 +46,7 @@ module.exports = {
     hardhat: {
       forking: {
         url: process.env.ALCHEMY_MAINNET_URL,
-        blockNumber: 17425905,
+        blockNumber: Number(process.env.FORK_STRAT_BLOCK),
       },
       mining: {
         auto: false,
