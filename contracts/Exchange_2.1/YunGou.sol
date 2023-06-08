@@ -70,6 +70,12 @@ contract YunGou is Consideration {
         return result;
     }
 
+    function cancel(
+        BasicOrderParameters[] calldata ordersParameters
+    ) external returns (bool cancelled) {
+        cancelled = _cancel(ordersParameters);
+    }
+
     function name() external pure returns (string memory contractName) {
         // Return the name of the contract.
         return _name();
@@ -85,7 +91,7 @@ contract YunGou is Consideration {
 
     function getOrderHash(
         BasicOrderParameters calldata orderParameters
-    ) external view returns (bytes32 orderHash) {
+    ) external pure returns (bytes32 orderHash) {
         return _getOrderHash(orderParameters);
     }
 }

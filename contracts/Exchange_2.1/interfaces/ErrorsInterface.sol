@@ -17,3 +17,9 @@ error IncorrectSystemSignature();
 error IncorrectOrderSignature();
 
 error IncorrectSignatureLength();
+
+error OrderIsCancelled(bytes32);
+
+error OrderAlreadyAllFilled(bytes32);
+
+error NotOwnerOfOrder();

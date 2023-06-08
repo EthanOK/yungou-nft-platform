@@ -26,7 +26,7 @@ abstract contract Consideration is Validator, Executor {
             order.totalPayment
         );
 
-        _validateSignature(order, systemVerifier);
+        _validateSignatureAndUpdateStatus(order, systemVerifier);
 
         if (valueETH < order.totalPayment) {
             _revertInsufficientETH();
@@ -83,6 +83,42 @@ abstract contract Consideration is Validator, Executor {
         }
 
         return true;
+    }
+
+    function _cancel(
+        BasicOrderParameters[] calldata ordersParameters
+    ) internal returns (bool cancelled) {
+        OrderStatus storage _orderStatus;
+
+        address _account = _msgSender();
+
+        unchecked {
+            uint256 totalOrders = ordersParameters.length;
+
+            for (uint256 i = 0; i < totalOrders; ) {
+                // Retrieve the order.
+                BasicOrderParameters calldata parameters = ordersParameters[i];
+
+                if (parameters.offerer != _account) {
+                    _revertNotOwnerOfOrder();
+                }
+
+                bytes32 orderHash = _getOrderHash(parameters);
+
+                _orderStatus = orderStatus[orderHash];
+
+                // Update the order status as not valid and cancelled.
+                _orderStatus.isValidated = false;
+
+                _orderStatus.isCancelled = true;
+
+                emit OrderCancelled(orderHash, _account);
+
+                ++i;
+            }
+        }
+
+        cancelled = true;
     }
 
     function _information() internal view returns (string memory, bytes32) {

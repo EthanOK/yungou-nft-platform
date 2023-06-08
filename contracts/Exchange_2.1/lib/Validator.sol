@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {NAME_YUNGOU, VERSION, BASICORDER_TYPE_HASH} from "./YunGouConstants.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {BasicOrderParameters, BasicOrder, OrderType} from "./YunGouStructsAndEnums.sol";
+import {BasicOrderParameters, BasicOrder, OrderType, OrderStatus} from "./YunGouStructsAndEnums.sol";
 
 abstract contract Validator is
     Initializable,
@@ -17,11 +17,13 @@ abstract contract Validator is
     ReentrancyGuardUpgradeable,
     EIP712Upgradeable
 {
+    mapping(bytes32 => OrderStatus) orderStatus;
+
     function _validateOrders(
         BasicOrder[] calldata orders,
         uint256 currentTimestamp,
         address _systemVerifier
-    ) internal view returns (uint256 totalFee, uint256 totalPayment_orders) {
+    ) internal returns (uint256 totalFee, uint256 totalPayment_orders) {
         for (uint i = 0; i < orders.length; i++) {
             _validateOrder_ETH(
                 orders[i].parameters,
@@ -31,7 +33,7 @@ abstract contract Validator is
                 orders[i].totalPayment
             );
 
-            _validateSignature(orders[i], _systemVerifier);
+            _validateSignatureAndUpdateStatus(orders[i], _systemVerifier);
 
             unchecked {
                 totalFee =
@@ -79,11 +81,23 @@ abstract contract Validator is
         }
     }
 
-    function _validateSignature(
+    function _validateSignatureAndUpdateStatus(
         BasicOrder calldata order,
         address _systemVerifier
-    ) internal view {
-        _validateOrderSignature(order.parameters, order.orderSignature);
+    ) internal {
+        bytes32 orderHash = _getOrderHash(order.parameters);
+
+        OrderStatus storage _orderStatus = orderStatus[orderHash];
+
+        _verifyOrderStatus(orderHash, _orderStatus);
+
+        if (!_orderStatus.isValidated) {
+            _validateOrderSignature(order.parameters, order.orderSignature);
+            // update shelvesTotal
+            _orderStatus.shelvesTotal = uint120(order.parameters.sellAmount);
+            // update Validate
+            _orderStatus.isValidated = true;
+        }
 
         _validateSystemSignature(
             order.orderSignature,
@@ -96,6 +110,30 @@ abstract contract Validator is
             order.systemSignature,
             _systemVerifier
         );
+        // update soldTotal
+        unchecked {
+            _orderStatus.soldTotal += uint120(order.buyAmount);
+        }
+    }
+
+    function _verifyOrderStatus(
+        bytes32 orderHash,
+        OrderStatus memory _orderStatus
+    ) internal pure returns (bool valid) {
+        // Ensure that the order has not been cancelled.
+        if (_orderStatus.isCancelled) {
+            _revertOrderIsCancelled(orderHash);
+        }
+
+        uint256 orderShelvesTotal = _orderStatus.shelvesTotal;
+
+        // If the order is not entirely unused...
+        if (orderShelvesTotal != 0) {
+            if (_orderStatus.soldTotal >= orderShelvesTotal) {
+                _revertOrderAlreadyAllFilled(orderHash);
+            }
+        }
+        valid = true;
     }
 
     function _validateSystemSignature(
@@ -134,7 +172,7 @@ abstract contract Validator is
         BasicOrderParameters calldata parameters,
         bytes calldata orderSignature
     ) internal view {
-        bytes32 hash = _getOrderHash(parameters);
+        bytes32 hash = _getHash(parameters);
 
         address signer = ECDSAUpgradeable.recover(hash, orderSignature);
 
@@ -143,7 +181,7 @@ abstract contract Validator is
         }
     }
 
-    function _getOrderHash(
+    function _getHash(
         BasicOrderParameters calldata parameters
     ) internal view returns (bytes32 orderHash) {
         return
@@ -151,4 +189,12 @@ abstract contract Validator is
                 keccak256(abi.encode(BASICORDER_TYPE_HASH, parameters))
             );
     }
+
+    function _getOrderHash(
+        BasicOrderParameters calldata parameters
+    ) internal pure returns (bytes32 orderHash) {
+        return keccak256(abi.encode(BASICORDER_TYPE_HASH, parameters));
+    }
+
+
 }

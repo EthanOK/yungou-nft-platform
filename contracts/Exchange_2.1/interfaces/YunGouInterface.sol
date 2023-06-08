@@ -15,6 +15,8 @@ interface YunGouInterface {
         uint256 totalPlatformFee
     );
 
+    event OrderCancelled(bytes32 orderHash, address account);
+
     function setBeneficiary(address payable newBeneficiary) external;
 
     function setSystemVerifier(address _systemVerifier) external;

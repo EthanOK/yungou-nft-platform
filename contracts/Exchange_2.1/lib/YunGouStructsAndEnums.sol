@@ -38,3 +38,14 @@ struct BasicOrder {
     uint256 expiryDate;
     bytes systemSignature;
 }
+
+struct OrderStatus {
+    // Validate
+    bool isValidated;
+    // Cancel
+    bool isCancelled;
+    // Total quantity sold
+    uint120 soldTotal;
+    // Total quantity on shelves
+    uint120 shelvesTotal;
+}

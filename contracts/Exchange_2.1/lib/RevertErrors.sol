@@ -35,3 +35,15 @@ function _revertIncorrectOrderSignature() pure {
 function _revertIncorrectSignatureLength() pure {
     revert IncorrectSignatureLength();
 }
+
+function _revertOrderIsCancelled(bytes32 orderHash) pure {
+    revert OrderIsCancelled(orderHash);
+}
+
+function _revertOrderAlreadyAllFilled(bytes32 orderHash) pure {
+    revert OrderAlreadyAllFilled(orderHash);
+}
+
+function _revertNotOwnerOfOrder() pure {
+    revert NotOwnerOfOrder();
+}
