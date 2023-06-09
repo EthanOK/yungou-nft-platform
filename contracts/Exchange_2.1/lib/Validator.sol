@@ -23,14 +23,7 @@ abstract contract Validator is
         BasicOrder[] calldata orders,
         uint256 currentTimestamp,
         address _systemVerifier
-    )
-        internal
-        returns (
-            uint256 totalFee,
-            uint256 totalPayment_orders,
-            bytes32[] memory ordersHash
-        )
-    {
+    ) internal returns (uint256 totalFee, uint256 totalPayment_orders) {
         for (uint i = 0; i < orders.length; i++) {
             _validateOrder_ETH(
                 orders[i].parameters,
@@ -40,10 +33,7 @@ abstract contract Validator is
                 orders[i].totalPayment
             );
 
-            ordersHash[i] = _validateSignatureAndUpdateStatus(
-                orders[i],
-                _systemVerifier
-            );
+            _validateSignatureAndUpdateStatus(orders[i], _systemVerifier);
 
             unchecked {
                 totalFee =
@@ -94,8 +84,8 @@ abstract contract Validator is
     function _validateSignatureAndUpdateStatus(
         BasicOrder calldata order,
         address _systemVerifier
-    ) internal returns (bytes32) {
-        bytes32 orderHash = _getOrderHash(order.parameters);
+    ) internal returns (bytes32 orderHash) {
+        orderHash = _getOrderHash(order.parameters);
 
         OrderStatus storage orderStatus = ordersStatus[orderHash];
 
@@ -124,7 +114,6 @@ abstract contract Validator is
         unchecked {
             orderStatus.soldTotal += uint120(order.buyAmount);
         }
-        return orderHash;
     }
 
     function _verifyOrderStatus(

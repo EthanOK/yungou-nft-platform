@@ -6,7 +6,6 @@ import {BasicOrderParameters, BasicOrder, OrderType, OrderStatus} from "../lib/Y
 interface YunGouInterface {
     event Exchange(
         bytes32 indexed orderHash,
-        address indexed offerer,
         address offerToken,
         uint256 offerTokenId,
         address buyer,

@@ -10,30 +10,24 @@ abstract contract Executor is YunGouInterface {
     function _excuteExchangeOrder(
         bytes32 orderHash,
         BasicOrder calldata order,
-        address receiver,
-        uint256 totalFee,
-        address _beneficiary
+        address receiver
     ) internal {
-        _transferNftToBuyer(
-            order.parameters.orderType,
-            order.parameters.offerer,
-            receiver,
-            order.parameters.offerToken,
-            order.parameters.offerTokenId,
-            order.buyAmount
-        );
+        {
+            _transferNftToBuyer(
+                order.parameters.orderType,
+                order.parameters.offerer,
+                receiver,
+                order.parameters.offerToken,
+                order.parameters.offerTokenId,
+                order.buyAmount
+            );
 
-        // transfer After-Tax income to offerer
-        _transferETH(order.parameters.offerer, order.totalAfterTaxIncome);
-
-        if (totalFee > 0) {
-            // transfer total Fee
-            _transferETH(_beneficiary, totalFee);
+            // transfer After-Tax income to offerer
+            _transferETH(order.parameters.offerer, order.totalAfterTaxIncome);
         }
 
         emit Exchange(
             orderHash,
-            order.parameters.offerer,
             order.parameters.offerToken,
             order.parameters.offerTokenId,
             receiver,
@@ -42,48 +36,6 @@ abstract contract Executor is YunGouInterface {
             order.totalRoyaltyFee,
             order.totalPlatformFee
         );
-    }
-
-    function _excuteExchangeOrders(
-        bytes32[] memory ordersHash,
-        BasicOrder[] calldata orders,
-        address receiver,
-        uint256 totalFee,
-        address _beneficiary
-    ) internal {
-        for (uint256 i = 0; i < orders.length; ++i) {
-            _transferNftToBuyer(
-                orders[i].parameters.orderType,
-                orders[i].parameters.offerer,
-                receiver,
-                orders[i].parameters.offerToken,
-                orders[i].parameters.offerTokenId,
-                orders[i].buyAmount
-            );
-
-            // transfer After-Tax income to offerer
-            _transferETH(
-                orders[i].parameters.offerer,
-                orders[i].totalAfterTaxIncome
-            );
-
-            emit Exchange(
-                ordersHash[i],
-                orders[i].parameters.offerer,
-                orders[i].parameters.offerToken,
-                orders[i].parameters.offerTokenId,
-                receiver,
-                orders[i].buyAmount,
-                orders[i].totalPayment,
-                orders[i].totalRoyaltyFee,
-                orders[i].totalPlatformFee
-            );
-        }
-
-        if (totalFee > 0) {
-            // transfer total Fee
-            _transferETH(_beneficiary, totalFee);
-        }
     }
 
     function _transferNftToBuyer(

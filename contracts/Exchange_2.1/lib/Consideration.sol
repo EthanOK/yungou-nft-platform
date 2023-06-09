@@ -18,43 +18,30 @@ abstract contract Consideration is Validator, Executor {
 
         uint256 currentTimestamp = block.timestamp;
 
-        _validateOrder_ETH(
-            order.parameters,
-            order.expiryDate,
-            order.buyAmount,
-            currentTimestamp,
-            order.totalPayment
-        );
+        uint256 totalFee;
 
-        bytes32 orderHash = _validateSignatureAndUpdateStatus(
-            order,
-            systemVerifier
-        );
+        uint256 totalPayment;
 
-        if (valueETH < order.totalPayment) {
-            _revertInsufficientETH();
-        }
-
+        _verifyAndExcute(order, receiver, systemVerifier, currentTimestamp);
         unchecked {
-            uint256 totalFee = order.totalPlatformFee + order.totalRoyaltyFee;
+            totalFee = order.totalRoyaltyFee + order.totalPlatformFee;
 
-            _excuteExchangeOrder(
-                orderHash,
-                order,
-                receiver,
-                totalFee,
-                beneficiary
-            );
+            totalPayment = order.totalPayment;
         }
 
-        if (valueETH > order.totalPayment) {
+        if (totalFee > 0) {
+            _transferETH(beneficiary, totalFee);
+        }
+
+        if (valueETH < totalPayment) {
+            _revertInsufficientETH();
+        } else if (valueETH > totalPayment) {
             unchecked {
-                uint256 _amount = valueETH - order.totalPayment;
+                uint256 _amount = valueETH - totalPayment;
 
                 _transferETH(receiver, _amount);
             }
         }
-
         return true;
     }
 
@@ -70,26 +57,36 @@ abstract contract Consideration is Validator, Executor {
         uint256 valueETH = msg.value;
 
         uint256 currentTimestamp = block.timestamp;
+        uint256 totalFee;
+        uint256 totalPayment;
 
-        (
-            uint256 totalFee,
-            uint256 totalPayment,
-            bytes32[] memory ordersHash
-        ) = _validateOrders(orders, currentTimestamp, systemVerifier);
+        {
+            for (uint i = 0; i < orders.length; i++) {
+                _verifyAndExcute(
+                    orders[i],
+                    receiver,
+                    systemVerifier,
+                    currentTimestamp
+                );
+
+                unchecked {
+                    totalFee =
+                        totalFee +
+                        orders[i].totalRoyaltyFee +
+                        orders[i].totalPlatformFee;
+
+                    totalPayment = totalPayment + orders[i].totalPayment;
+                }
+            }
+        }
+
+        if (totalFee > 0) {
+            _transferETH(beneficiary, totalFee);
+        }
 
         if (valueETH < totalPayment) {
             _revertInsufficientETH();
-        }
-
-        _excuteExchangeOrders(
-            ordersHash,
-            orders,
-            receiver,
-            totalFee,
-            beneficiary
-        );
-
-        if (valueETH > totalPayment) {
+        } else if (valueETH > totalPayment) {
             unchecked {
                 uint256 _amount = valueETH - totalPayment;
 
@@ -98,6 +95,28 @@ abstract contract Consideration is Validator, Executor {
         }
 
         return true;
+    }
+
+    function _verifyAndExcute(
+        BasicOrder calldata order,
+        address receiver,
+        address systemVerifier,
+        uint256 currentTimestamp
+    ) internal {
+        _validateOrder_ETH(
+            order.parameters,
+            order.expiryDate,
+            order.buyAmount,
+            currentTimestamp,
+            order.totalPayment
+        );
+
+        bytes32 orderHash = _validateSignatureAndUpdateStatus(
+            order,
+            systemVerifier
+        );
+
+        _excuteExchangeOrder(orderHash, order, receiver);
     }
 
     function _cancel(
