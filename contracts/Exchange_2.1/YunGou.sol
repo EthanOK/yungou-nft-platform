@@ -72,7 +72,7 @@ contract YunGou is Consideration {
 
     function cancel(
         BasicOrderParameters[] calldata ordersParameters
-    ) external returns (bool cancelled) {
+    ) external whenNotPaused nonReentrant returns (bool cancelled) {
         cancelled = _cancel(ordersParameters);
     }
 
@@ -93,5 +93,11 @@ contract YunGou is Consideration {
         BasicOrderParameters calldata orderParameters
     ) external pure returns (bytes32 orderHash) {
         return _getOrderHash(orderParameters);
+    }
+
+    function getOrderStatus(
+        bytes32 orderHash
+    ) external view returns (OrderStatus memory _orderStatus) {
+        _orderStatus = _getOrderStatus(orderHash);
     }
 }

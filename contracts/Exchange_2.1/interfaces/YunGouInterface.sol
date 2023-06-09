@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {BasicOrderParameters, BasicOrder, OrderType} from "../lib/YunGouStructsAndEnums.sol";
+import {BasicOrderParameters, BasicOrder, OrderType, OrderStatus} from "../lib/YunGouStructsAndEnums.sol";
 
 interface YunGouInterface {
     event Exchange(
@@ -37,6 +37,10 @@ interface YunGouInterface {
         address receiver
     ) external payable returns (bool);
 
+    function cancel(
+        BasicOrderParameters[] calldata ordersParameters
+    ) external returns (bool cancelled);
+
     function name() external pure returns (string memory contractName);
 
     function information()
@@ -47,4 +51,8 @@ interface YunGouInterface {
     function getOrderHash(
         BasicOrderParameters calldata orderParameters
     ) external view returns (bytes32 orderHash);
+
+    function getOrderStatus(
+        bytes32 orderHash
+    ) external view returns (OrderStatus memory _orderStatus);
 }

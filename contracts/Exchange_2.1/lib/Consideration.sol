@@ -105,7 +105,7 @@ abstract contract Consideration is Validator, Executor {
 
                 bytes32 orderHash = _getOrderHash(parameters);
 
-                _orderStatus = orderStatus[orderHash];
+                _orderStatus = ordersStatus[orderHash];
 
                 // Update the order status as not valid and cancelled.
                 _orderStatus.isValidated = false;

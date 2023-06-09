@@ -17,7 +17,7 @@ abstract contract Validator is
     ReentrancyGuardUpgradeable,
     EIP712Upgradeable
 {
-    mapping(bytes32 => OrderStatus) orderStatus;
+    mapping(bytes32 => OrderStatus) ordersStatus;
 
     function _validateOrders(
         BasicOrder[] calldata orders,
@@ -87,16 +87,16 @@ abstract contract Validator is
     ) internal {
         bytes32 orderHash = _getOrderHash(order.parameters);
 
-        OrderStatus storage _orderStatus = orderStatus[orderHash];
+        OrderStatus storage orderStatus = ordersStatus[orderHash];
 
-        _verifyOrderStatus(orderHash, _orderStatus);
+        _verifyOrderStatus(orderHash, orderStatus);
 
-        if (!_orderStatus.isValidated) {
+        if (!orderStatus.isValidated) {
             _validateOrderSignature(order.parameters, order.orderSignature);
             // update shelvesTotal
-            _orderStatus.shelvesTotal = uint120(order.parameters.sellAmount);
+            orderStatus.shelvesTotal = uint120(order.parameters.sellAmount);
             // update Validate
-            _orderStatus.isValidated = true;
+            orderStatus.isValidated = true;
         }
 
         _validateSystemSignature(
@@ -112,7 +112,7 @@ abstract contract Validator is
         );
         // update soldTotal
         unchecked {
-            _orderStatus.soldTotal += uint120(order.buyAmount);
+            orderStatus.soldTotal += uint120(order.buyAmount);
         }
     }
 
@@ -196,5 +196,9 @@ abstract contract Validator is
         return keccak256(abi.encode(BASICORDER_TYPE_HASH, parameters));
     }
 
-
+    function _getOrderStatus(
+        bytes32 orderHash
+    ) internal view returns (OrderStatus memory _orderStatus) {
+        _orderStatus = ordersStatus[orderHash];
+    }
 }

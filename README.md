@@ -1,5 +1,7 @@
 # YUNGOU Project
 
+`latest version: Excahnge_2.1`
+
 This project demonstrates a basic Hardhat use case.
 
 ```
