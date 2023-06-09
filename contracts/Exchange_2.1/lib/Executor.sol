@@ -8,6 +8,7 @@ import {BasicOrderParameters, BasicOrder, OrderType} from "./YunGouStructsAndEnu
 
 abstract contract Executor is YunGouInterface {
     function _excuteExchangeOrder(
+        bytes32 orderHash,
         BasicOrder calldata order,
         address receiver,
         uint256 totalFee,
@@ -31,6 +32,7 @@ abstract contract Executor is YunGouInterface {
         }
 
         emit Exchange(
+            orderHash,
             order.parameters.offerer,
             order.parameters.offerToken,
             order.parameters.offerTokenId,
@@ -43,6 +45,7 @@ abstract contract Executor is YunGouInterface {
     }
 
     function _excuteExchangeOrders(
+        bytes32[] memory ordersHash,
         BasicOrder[] calldata orders,
         address receiver,
         uint256 totalFee,
@@ -65,6 +68,7 @@ abstract contract Executor is YunGouInterface {
             );
 
             emit Exchange(
+                ordersHash[i],
                 orders[i].parameters.offerer,
                 orders[i].parameters.offerToken,
                 orders[i].parameters.offerTokenId,

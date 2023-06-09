@@ -26,7 +26,10 @@ abstract contract Consideration is Validator, Executor {
             order.totalPayment
         );
 
-        _validateSignatureAndUpdateStatus(order, systemVerifier);
+        bytes32 orderHash = _validateSignatureAndUpdateStatus(
+            order,
+            systemVerifier
+        );
 
         if (valueETH < order.totalPayment) {
             _revertInsufficientETH();
@@ -35,7 +38,13 @@ abstract contract Consideration is Validator, Executor {
         unchecked {
             uint256 totalFee = order.totalPlatformFee + order.totalRoyaltyFee;
 
-            _excuteExchangeOrder(order, receiver, totalFee, beneficiary);
+            _excuteExchangeOrder(
+                orderHash,
+                order,
+                receiver,
+                totalFee,
+                beneficiary
+            );
         }
 
         if (valueETH > order.totalPayment) {
@@ -62,17 +71,23 @@ abstract contract Consideration is Validator, Executor {
 
         uint256 currentTimestamp = block.timestamp;
 
-        (uint256 totalFee, uint256 totalPayment) = _validateOrders(
-            orders,
-            currentTimestamp,
-            systemVerifier
-        );
+        (
+            uint256 totalFee,
+            uint256 totalPayment,
+            bytes32[] memory ordersHash
+        ) = _validateOrders(orders, currentTimestamp, systemVerifier);
 
         if (valueETH < totalPayment) {
             _revertInsufficientETH();
         }
 
-        _excuteExchangeOrders(orders, receiver, totalFee, beneficiary);
+        _excuteExchangeOrders(
+            ordersHash,
+            orders,
+            receiver,
+            totalFee,
+            beneficiary
+        );
 
         if (valueETH > totalPayment) {
             unchecked {
