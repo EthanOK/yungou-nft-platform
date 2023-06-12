@@ -2,6 +2,8 @@
 pragma solidity ^0.8.18;
 
 import "./RevertErrors.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -54,7 +56,7 @@ abstract contract Validator is
         uint256 buyAmount,
         uint256 currentTimestamp,
         uint256 totalPayment_order
-    ) internal pure {
+    ) internal view {
         if (
             currentTimestamp < parameters.startTime ||
             currentTimestamp > parameters.endTime
@@ -67,11 +69,30 @@ abstract contract Validator is
         }
 
         if (parameters.orderType == OrderType.ETH_TO_ERC721) {
-            require(buyAmount == 1 && parameters.sellAmount == 1);
+            if (buyAmount != 1 || parameters.sellAmount != 1) {
+                _revertIncorrectBuyAmount();
+            }
+
+            if (
+                IERC721(parameters.offerToken).ownerOf(
+                    parameters.offerTokenId
+                ) != parameters.offerer
+            ) {
+                _revertOffererNotOwner();
+            }
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
-            require(buyAmount > 0 && buyAmount <= parameters.sellAmount);
-        } else {
-            _revertIncorrectBuyAmount();
+            if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
+                _revertIncorrectBuyAmount();
+            }
+            if (
+                buyAmount >
+                IERC1155(parameters.offerToken).balanceOf(
+                    parameters.offerer,
+                    parameters.offerTokenId
+                )
+            ) {
+                _revertInsufficientERC1155Balance();
+            }
         }
 
         unchecked {
@@ -112,7 +133,12 @@ abstract contract Validator is
         );
         // update soldTotal
         unchecked {
-            orderStatus.soldTotal += uint120(order.buyAmount);
+            orderStatus.soldTotal =
+                orderStatus.soldTotal +
+                uint120(order.buyAmount);
+            if (orderStatus.soldTotal > orderStatus.shelvesTotal) {
+                _revertExceededShelvesTotal();
+            }
         }
     }
 

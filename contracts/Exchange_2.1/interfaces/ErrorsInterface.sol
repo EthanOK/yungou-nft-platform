@@ -10,6 +10,10 @@ error SystemSignatureExpired();
 
 error IncorrectBuyAmount();
 
+error OffererNotOwner();
+
+error InsufficientERC1155Balance();
+
 error IncorrectTotalPayment();
 
 error IncorrectSystemSignature();
@@ -23,3 +27,5 @@ error OrderIsCancelled(bytes32);
 error OrderAlreadyAllFilled(bytes32);
 
 error NotOwnerOfOrder();
+
+error ExceededShelvesTotal();

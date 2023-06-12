@@ -20,6 +20,14 @@ function _revertIncorrectBuyAmount() pure {
     revert IncorrectBuyAmount();
 }
 
+function _revertOffererNotOwner() pure {
+    revert OffererNotOwner();
+}
+
+function _revertInsufficientERC1155Balance() pure {
+    revert InsufficientERC1155Balance();
+}
+
 function _revertIncorrectTotalPayment() pure {
     revert IncorrectTotalPayment();
 }
@@ -46,4 +54,8 @@ function _revertOrderAlreadyAllFilled(bytes32 orderHash) pure {
 
 function _revertNotOwnerOfOrder() pure {
     revert NotOwnerOfOrder();
+}
+
+function _revertExceededShelvesTotal() pure {
+    revert ExceededShelvesTotal();
 }

@@ -5,17 +5,18 @@ import {BasicOrderParameters, BasicOrder, OrderType, OrderStatus} from "../lib/Y
 
 interface YunGouInterface {
     event Exchange(
-        bytes32 indexed orderHash,
-        address offerToken,
+        bytes32 orderHash,
+        address indexed offerer,
+        address indexed offerToken,
         uint256 offerTokenId,
-        address buyer,
+        address indexed buyer,
         uint256 buyAmount,
         uint256 totalPayment,
         uint256 totalRoyaltyFee,
         uint256 totalPlatformFee
     );
 
-    event OrderCancelled(bytes32 indexed orderHash, address account);
+    event OrderCancelled(bytes32 orderHash, address indexed account);
 
     function setBeneficiary(address payable newBeneficiary) external;
 

@@ -28,6 +28,7 @@ abstract contract Executor is YunGouInterface {
 
         emit Exchange(
             orderHash,
+            order.parameters.offerer,
             order.parameters.offerToken,
             order.parameters.offerTokenId,
             receiver,
