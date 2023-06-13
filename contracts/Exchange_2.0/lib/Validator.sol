@@ -79,22 +79,22 @@ abstract contract Validator is
                 _revertIncorrectBuyAmount();
             }
 
-            _checkOwnerOfERC721(
-                parameters.offerToken,
-                parameters.offerTokenId,
-                parameters.offerer
-            );
+            // _checkOwnerOfERC721(
+            //     parameters.offerToken,
+            //     parameters.offerTokenId,
+            //     parameters.offerer
+            // );
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
             if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
                 _revertIncorrectBuyAmount();
             }
 
-            _checkBalanceOfERC1155(
-                parameters.offerToken,
-                parameters.offerTokenId,
-                parameters.offerer,
-                buyAmount
-            );
+            // _checkBalanceOfERC1155(
+            //     parameters.offerToken,
+            //     parameters.offerTokenId,
+            //     parameters.offerer,
+            //     buyAmount
+            // );
         } else {
             _revertIncorrectOrderType();
         }

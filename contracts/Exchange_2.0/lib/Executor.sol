@@ -48,23 +48,27 @@ abstract contract Executor is YunGouInterface {
         uint256 offerTokenId,
         uint256 amount
     ) internal {
-        if (fromAccount != toAccount) {
-            if (orderType == OrderType.ETH_TO_ERC721) {
-                _transferFromERC721(
-                    offerToken,
-                    fromAccount,
-                    toAccount,
-                    offerTokenId
-                );
-            } else if (orderType == OrderType.ETH_TO_ERC1155) {
-                _safeTransferFromERC1155(
-                    offerToken,
-                    fromAccount,
-                    toAccount,
-                    offerTokenId,
-                    amount
-                );
-            }
+        if (
+            orderType == OrderType.ETH_TO_ERC721 ||
+            orderType == OrderType.ERC20_TO_ERC721
+        ) {
+            _transferFromERC721(
+                offerToken,
+                fromAccount,
+                toAccount,
+                offerTokenId
+            );
+        } else if (
+            orderType == OrderType.ETH_TO_ERC1155 ||
+            orderType == OrderType.ERC20_TO_ERC1155
+        ) {
+            _safeTransferFromERC1155(
+                offerToken,
+                fromAccount,
+                toAccount,
+                offerTokenId,
+                amount
+            );
         }
     }
 
