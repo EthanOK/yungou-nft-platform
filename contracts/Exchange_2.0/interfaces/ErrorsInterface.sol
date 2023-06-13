@@ -10,6 +10,8 @@ error SystemSignatureExpired();
 
 error IncorrectBuyAmount();
 
+error IncorrectOrderType();
+
 error OffererNotOwner();
 
 error InsufficientERC1155Balance();
@@ -33,3 +35,7 @@ error ExceededShelvesTotal();
 error FailedCallOwnerOf();
 
 error FailedCallBalanceOf();
+
+error FailedTransferFromERC721();
+
+error FailedSafeTransferFromERC1155();

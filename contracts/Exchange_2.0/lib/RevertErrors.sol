@@ -20,6 +20,10 @@ function _revertIncorrectBuyAmount() pure {
     revert IncorrectBuyAmount();
 }
 
+function _revertIncorrectOrderType() pure {
+    revert IncorrectOrderType();
+}
+
 function _revertOffererNotOwner() pure {
     revert OffererNotOwner();
 }
@@ -66,4 +70,12 @@ function _revertFailedCallOwnerOf() pure {
 
 function _revertFailedCallBalanceOf() pure {
     revert FailedCallBalanceOf();
+}
+
+function _revertFailedTransferFromERC721() pure {
+    revert FailedTransferFromERC721();
+}
+
+function _revertFailedSafeTransferFromERC1155() pure {
+    revert FailedSafeTransferFromERC1155();
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import "./RevertErrors.sol";
 import "../interfaces/YunGouInterface.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -49,7 +50,8 @@ abstract contract Executor is YunGouInterface {
     ) internal {
         if (fromAccount != toAccount) {
             if (orderType == OrderType.ETH_TO_ERC721) {
-                IERC721(offerToken).transferFrom(
+                _transferFromERC721(
+                    offerToken,
                     fromAccount,
                     toAccount,
                     offerTokenId
@@ -68,5 +70,42 @@ abstract contract Executor is YunGouInterface {
 
     function _transferETH(address account, uint256 payAmount) internal {
         payable(account).transfer(payAmount);
+    }
+
+    function _transferFromERC721(
+        address offerToken,
+        address fromAccount,
+        address toAccount,
+        uint256 offerTokenId
+    ) private {
+        try
+            IERC721(offerToken).transferFrom(
+                fromAccount,
+                toAccount,
+                offerTokenId
+            )
+        {} catch {
+            _revertFailedTransferFromERC721();
+        }
+    }
+
+    function _safeTransferFromERC1155(
+        address offerToken,
+        address fromAccount,
+        address toAccount,
+        uint256 offerTokenId,
+        uint256 amount
+    ) private {
+        try
+            IERC1155(offerToken).safeTransferFrom(
+                fromAccount,
+                toAccount,
+                offerTokenId,
+                amount,
+                "0x"
+            )
+        {} catch {
+            _revertFailedSafeTransferFromERC1155();
+        }
     }
 }

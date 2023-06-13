@@ -26,7 +26,7 @@ abstract contract Validator is
         uint256 currentTimestamp,
         address _systemVerifier
     ) internal returns (uint256 totalFee, uint256 totalPayment_orders) {
-        for (uint i = 0; i < orders.length; i++) {
+        for (uint i = 0; i < orders.length; ) {
             _validateOrder_ETH(
                 orders[i].parameters,
                 orders[i].expiryDate,
@@ -46,6 +46,8 @@ abstract contract Validator is
                 totalPayment_orders =
                     totalPayment_orders +
                     orders[i].totalPayment;
+
+                ++i;
             }
         }
     }
@@ -72,32 +74,25 @@ abstract contract Validator is
             if (buyAmount != 1 || parameters.sellAmount != 1) {
                 _revertIncorrectBuyAmount();
             }
-            try
-                IERC721(parameters.offerToken).ownerOf(parameters.offerTokenId)
-            returns (address _owner) {
-                if (_owner != parameters.offerer) {
-                    _revertOffererNotOwner();
-                }
-            } catch {
-                _revertFailedCallOwnerOf();
-            }
+
+            _checkOwnerOfERC721(
+                parameters.offerToken,
+                parameters.offerTokenId,
+                parameters.offerer
+            );
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
             if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
                 _revertIncorrectBuyAmount();
             }
 
-            try
-                IERC1155(parameters.offerToken).balanceOf(
-                    parameters.offerer,
-                    parameters.offerTokenId
-                )
-            returns (uint256 _banlance) {
-                if (buyAmount > _banlance) {
-                    _revertInsufficientERC1155Balance();
-                }
-            } catch {
-                _revertFailedCallBalanceOf();
-            }
+            _checkBalanceOfERC1155(
+                parameters.offerToken,
+                parameters.offerTokenId,
+                parameters.offerer,
+                buyAmount
+            );
+        } else {
+            _revertIncorrectOrderType();
         }
 
         unchecked {
@@ -136,11 +131,13 @@ abstract contract Validator is
             order.systemSignature,
             _systemVerifier
         );
+
         // update soldTotal
         unchecked {
             orderStatus.soldTotal =
                 orderStatus.soldTotal +
                 uint120(order.buyAmount);
+
             if (orderStatus.soldTotal > orderStatus.shelvesTotal) {
                 _revertExceededShelvesTotal();
             }
@@ -231,5 +228,36 @@ abstract contract Validator is
         bytes32 orderHash
     ) internal view returns (OrderStatus memory _orderStatus) {
         _orderStatus = ordersStatus[orderHash];
+    }
+
+    function _checkOwnerOfERC721(
+        address offerToken,
+        uint256 offerTokenId,
+        address offerer
+    ) internal view {
+        try IERC721(offerToken).ownerOf(offerTokenId) returns (address _owner) {
+            if (_owner != offerer) {
+                _revertOffererNotOwner();
+            }
+        } catch {
+            _revertFailedCallOwnerOf();
+        }
+    }
+
+    function _checkBalanceOfERC1155(
+        address offerToken,
+        uint256 offerTokenId,
+        address offerer,
+        uint256 buyAmount
+    ) internal view {
+        try IERC1155(offerToken).balanceOf(offerer, offerTokenId) returns (
+            uint256 _banlance
+        ) {
+            if (buyAmount > _banlance) {
+                _revertInsufficientERC1155Balance();
+            }
+        } catch {
+            _revertFailedCallBalanceOf();
+        }
     }
 }

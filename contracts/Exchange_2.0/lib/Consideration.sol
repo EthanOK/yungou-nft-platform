@@ -23,6 +23,7 @@ abstract contract Consideration is Validator, Executor {
         uint256 totalPayment;
 
         _verifyAndExcute(order, receiver, systemVerifier, currentTimestamp);
+
         unchecked {
             totalFee = order.totalRoyaltyFee + order.totalPlatformFee;
 
@@ -131,7 +132,6 @@ abstract contract Consideration is Validator, Executor {
         uint256 totalOrders = ordersParameters.length;
 
         for (uint256 i = 0; i < totalOrders; ) {
-            // Retrieve the order.
             BasicOrderParameters calldata parameters = ordersParameters[i];
 
             if (parameters.offerer != _account) {
