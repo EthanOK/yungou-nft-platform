@@ -27,7 +27,7 @@ abstract contract Executor is YunGouInterface {
             _transferETH(order.parameters.offerer, order.totalAfterTaxIncome);
         }
 
-        emit Exchange(
+        emit OrderFulfilled(
             orderHash,
             order.parameters.offerer,
             order.parameters.offerToken,

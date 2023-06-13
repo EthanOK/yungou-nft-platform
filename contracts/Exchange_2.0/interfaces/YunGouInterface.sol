@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {BasicOrderParameters, BasicOrder, OrderType, OrderStatus} from "../lib/YunGouStructsAndEnums.sol";
 
 interface YunGouInterface {
-    event Exchange(
+    event OrderFulfilled(
         bytes32 orderHash,
         address indexed offerer,
         address indexed offerToken,
