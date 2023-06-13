@@ -12,6 +12,6 @@ async function main() {
 
 main();
 
-// npx hardhat run scripts/deploy_YunGou_T_2_1.js --network goerli
+// npx hardhat run scripts/deploy_YunGou_T_2_0.js --network goerli
 
 // npx hardhat verify --network goerli 0xb0E3773e3E02d0A1653F90345Bc8889fC820E230
