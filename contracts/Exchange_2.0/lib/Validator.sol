@@ -72,13 +72,14 @@ abstract contract Validator is
             if (buyAmount != 1 || parameters.sellAmount != 1) {
                 _revertIncorrectBuyAmount();
             }
-
-            if (
-                IERC721(parameters.offerToken).ownerOf(
-                    parameters.offerTokenId
-                ) != parameters.offerer
-            ) {
-                _revertOffererNotOwner();
+            try
+                IERC721(parameters.offerToken).ownerOf(parameters.offerTokenId)
+            returns (address _owner) {
+                if (_owner != parameters.offerer) {
+                    _revertOffererNotOwner();
+                }
+            } catch {
+                revert("");
             }
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
             if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
