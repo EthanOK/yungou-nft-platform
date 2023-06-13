@@ -54,14 +54,14 @@ abstract contract Consideration is Validator, Executor {
         if (receiver == address(0)) {
             receiver = _msgSender();
         }
-        uint256 valueETH = msg.value;
 
+        uint256 valueETH = msg.value;
         uint256 currentTimestamp = block.timestamp;
         uint256 totalFee;
         uint256 totalPayment;
 
         {
-            for (uint i = 0; i < orders.length; i++) {
+            for (uint i = 0; i < orders.length; ) {
                 _verifyAndExcute(
                     orders[i],
                     receiver,
@@ -76,6 +76,8 @@ abstract contract Consideration is Validator, Executor {
                         orders[i].totalPlatformFee;
 
                     totalPayment = totalPayment + orders[i].totalPayment;
+
+                    ++i;
                 }
             }
         }
@@ -126,28 +128,28 @@ abstract contract Consideration is Validator, Executor {
 
         address _account = _msgSender();
 
-        unchecked {
-            uint256 totalOrders = ordersParameters.length;
+        uint256 totalOrders = ordersParameters.length;
 
-            for (uint256 i = 0; i < totalOrders; ) {
-                // Retrieve the order.
-                BasicOrderParameters calldata parameters = ordersParameters[i];
+        for (uint256 i = 0; i < totalOrders; ) {
+            // Retrieve the order.
+            BasicOrderParameters calldata parameters = ordersParameters[i];
 
-                if (parameters.offerer != _account) {
-                    _revertNotOwnerOfOrder();
-                }
+            if (parameters.offerer != _account) {
+                _revertNotOwnerOfOrder();
+            }
 
-                bytes32 orderHash = _getOrderHash(parameters);
+            bytes32 orderHash = _getOrderHash(parameters);
 
-                _orderStatus = ordersStatus[orderHash];
+            _orderStatus = ordersStatus[orderHash];
 
-                // Update the order status as not valid and cancelled.
-                _orderStatus.isValidated = false;
+            // Update the order status as not valid and cancelled.
+            _orderStatus.isValidated = false;
 
-                _orderStatus.isCancelled = true;
+            _orderStatus.isCancelled = true;
 
-                emit OrderCancelled(orderHash, _account);
+            emit OrderCancelled(orderHash, _account);
 
+            unchecked {
                 ++i;
             }
         }
