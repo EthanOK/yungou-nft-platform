@@ -59,3 +59,11 @@ function _revertNotOwnerOfOrder() pure {
 function _revertExceededShelvesTotal() pure {
     revert ExceededShelvesTotal();
 }
+
+function _revertFailedCallOwnerOf() pure {
+    revert FailedCallOwnerOf();
+}
+
+function _revertFailedCallBalanceOf() pure {
+    revert FailedCallBalanceOf();
+}

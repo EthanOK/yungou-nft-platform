@@ -29,3 +29,7 @@ error OrderAlreadyAllFilled(bytes32);
 error NotOwnerOfOrder();
 
 error ExceededShelvesTotal();
+
+error FailedCallOwnerOf();
+
+error FailedCallBalanceOf();

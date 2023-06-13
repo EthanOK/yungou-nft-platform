@@ -79,20 +79,24 @@ abstract contract Validator is
                     _revertOffererNotOwner();
                 }
             } catch {
-                revert("");
+                _revertFailedCallOwnerOf();
             }
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
             if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
                 _revertIncorrectBuyAmount();
             }
-            if (
-                buyAmount >
+
+            try
                 IERC1155(parameters.offerToken).balanceOf(
                     parameters.offerer,
                     parameters.offerTokenId
                 )
-            ) {
-                _revertInsufficientERC1155Balance();
+            returns (uint256 _banlance) {
+                if (buyAmount > _banlance) {
+                    _revertInsufficientERC1155Balance();
+                }
+            } catch {
+                _revertFailedCallBalanceOf();
             }
         }
 
