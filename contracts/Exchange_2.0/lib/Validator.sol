@@ -70,6 +70,10 @@ abstract contract Validator is
             _revertSystemSignatureExpired();
         }
 
+        if (parameters.offerToken.code.length == 0) {
+            _revertNoContract(parameters.offerToken);
+        }
+
         if (parameters.orderType == OrderType.ETH_TO_ERC721) {
             if (buyAmount != 1 || parameters.sellAmount != 1) {
                 _revertIncorrectBuyAmount();

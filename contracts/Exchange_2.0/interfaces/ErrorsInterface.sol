@@ -8,6 +8,8 @@ error OrderExpired();
 
 error SystemSignatureExpired();
 
+error NoContract(address);
+
 error IncorrectBuyAmount();
 
 error IncorrectOrderType();

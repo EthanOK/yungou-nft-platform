@@ -57,12 +57,12 @@ abstract contract Executor is YunGouInterface {
                     offerTokenId
                 );
             } else if (orderType == OrderType.ETH_TO_ERC1155) {
-                IERC1155(offerToken).safeTransferFrom(
+                _safeTransferFromERC1155(
+                    offerToken,
                     fromAccount,
                     toAccount,
                     offerTokenId,
-                    amount,
-                    "0x"
+                    amount
                 );
             }
         }

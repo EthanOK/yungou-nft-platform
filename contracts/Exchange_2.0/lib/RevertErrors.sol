@@ -16,6 +16,10 @@ function _revertSystemSignatureExpired() pure {
     revert SystemSignatureExpired();
 }
 
+function _revertNoContract(address offerToken) pure {
+    revert NoContract(offerToken);
+}
+
 function _revertIncorrectBuyAmount() pure {
     revert IncorrectBuyAmount();
 }
