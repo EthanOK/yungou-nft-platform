@@ -2,8 +2,6 @@
 pragma solidity ^0.8.18;
 
 import "./RevertErrors.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -78,23 +76,10 @@ abstract contract Validator is
             if (buyAmount != 1 || parameters.sellAmount != 1) {
                 _revertIncorrectBuyAmount();
             }
-
-            // _checkOwnerOfERC721(
-            //     parameters.offerToken,
-            //     parameters.offerTokenId,
-            //     parameters.offerer
-            // );
         } else if (parameters.orderType == OrderType.ETH_TO_ERC1155) {
             if (buyAmount == 0 || buyAmount > parameters.sellAmount) {
                 _revertIncorrectBuyAmount();
             }
-
-            // _checkBalanceOfERC1155(
-            //     parameters.offerToken,
-            //     parameters.offerTokenId,
-            //     parameters.offerer,
-            //     buyAmount
-            // );
         } else {
             _revertIncorrectOrderType();
         }
@@ -165,6 +150,7 @@ abstract contract Validator is
                 _revertOrderAlreadyAllFilled(orderHash);
             }
         }
+
         valid = true;
     }
 
@@ -232,36 +218,5 @@ abstract contract Validator is
         bytes32 orderHash
     ) internal view returns (OrderStatus memory _orderStatus) {
         _orderStatus = ordersStatus[orderHash];
-    }
-
-    function _checkOwnerOfERC721(
-        address offerToken,
-        uint256 offerTokenId,
-        address offerer
-    ) internal view {
-        try IERC721(offerToken).ownerOf(offerTokenId) returns (address _owner) {
-            if (_owner != offerer) {
-                _revertOffererNotOwner();
-            }
-        } catch {
-            _revertFailedCallOwnerOf();
-        }
-    }
-
-    function _checkBalanceOfERC1155(
-        address offerToken,
-        uint256 offerTokenId,
-        address offerer,
-        uint256 buyAmount
-    ) internal view {
-        try IERC1155(offerToken).balanceOf(offerer, offerTokenId) returns (
-            uint256 _banlance
-        ) {
-            if (buyAmount > _banlance) {
-                _revertInsufficientERC1155Balance();
-            }
-        } catch {
-            _revertFailedCallBalanceOf();
-        }
     }
 }
