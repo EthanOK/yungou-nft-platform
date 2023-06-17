@@ -5,6 +5,8 @@ string constant NAME_YUNGOU = "YunGou";
 
 string constant VERSION = "2.0";
 
+address constant ZERO_ADDRESS = address(0);
+
 bytes32 constant BASICORDER_TYPE_HASH = keccak256(
     "BasicOrderParameters("
     "uint8 orderType,"

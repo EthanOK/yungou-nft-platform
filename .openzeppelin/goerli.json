@@ -3767,7 +3767,7 @@
             "label": "ordersStatus",
             "offset": 0,
             "slot": "253",
-            "type": "t_mapping(t_bytes32,t_struct(OrderStatus)4351_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(OrderStatus)4349_storage)",
             "contract": "Validator",
             "src": "contracts\\Exchange_2.0\\lib\\Validator.sol:20"
           },
@@ -3813,11 +3813,11 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes32,t_struct(OrderStatus)4351_storage)": {
+          "t_mapping(t_bytes32,t_struct(OrderStatus)4349_storage)": {
             "label": "mapping(bytes32 => struct OrderStatus)",
             "numberOfBytes": "32"
           },
-          "t_struct(OrderStatus)4351_storage": {
+          "t_struct(OrderStatus)4349_storage": {
             "label": "struct OrderStatus",
             "members": [
               {

@@ -15,6 +15,9 @@ module.exports = {
         runs: 200,
       },
       viaIR: true,
+      // modelChecker: {
+      //   engine: "all",
+      // },
     },
   },
   networks: {

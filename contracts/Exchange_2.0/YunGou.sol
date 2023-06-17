@@ -47,27 +47,20 @@ contract YunGou is Consideration {
     function excuteWithETH(
         BasicOrder calldata order,
         address receiver
-    ) external payable whenNotPaused nonReentrant returns (bool) {
-        bool result = _excuteWithETH(
-            order,
-            receiver,
-            systemVerifier,
-            beneficiary
-        );
-        return result;
+    ) external payable whenNotPaused nonReentrant returns (bool result) {
+        result = _excuteWithETH(order, receiver, systemVerifier, beneficiary);
     }
 
     function batchExcuteWithETH(
         BasicOrder[] calldata orders,
         address receiver
-    ) external payable whenNotPaused nonReentrant returns (bool) {
-        bool result = _batchExcuteWithETH(
+    ) external payable whenNotPaused nonReentrant returns (bool result) {
+        result = _batchExcuteWithETH(
             orders,
             receiver,
             systemVerifier,
             beneficiary
         );
-        return result;
     }
 
     function cancel(
@@ -77,7 +70,6 @@ contract YunGou is Consideration {
     }
 
     function name() external pure returns (string memory contractName) {
-        // Return the name of the contract.
         return _name();
     }
 

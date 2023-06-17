@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./Executor.sol";
 import "./Validator.sol";
+import {ZERO_ADDRESS} from "./YunGouConstants.sol";
 
 abstract contract Consideration is Validator, Executor {
     function _excuteWithETH(
@@ -11,7 +12,7 @@ abstract contract Consideration is Validator, Executor {
         address systemVerifier,
         address beneficiary
     ) internal returns (bool) {
-        if (receiver == address(0)) {
+        if (receiver == ZERO_ADDRESS) {
             receiver = _msgSender();
         }
         uint256 valueETH = msg.value;
@@ -52,7 +53,7 @@ abstract contract Consideration is Validator, Executor {
         address systemVerifier,
         address beneficiary
     ) internal returns (bool) {
-        if (receiver == address(0)) {
+        if (receiver == ZERO_ADDRESS) {
             receiver = _msgSender();
         }
 
