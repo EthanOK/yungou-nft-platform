@@ -63,7 +63,23 @@ module.exports = {
   },
   etherscan: {
     // BSC_API_KEY ETHERSCAN_API_KEY MUMBAI_API_KEY
-    apiKey: process.env.BSC_API_KEY,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      goerli: process.env.ETHERSCAN_API_KEY,
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      bsc: process.env.BSC_API_KEY,
+      bscTestnet: process.env.BSC_API_KEY,
+    },
+    customChains: [
+      {
+        network: "phalcon",
+        chainId: 1,
+        urls: {
+          apiURL: process.env.PHALCON_FORK_APIURL,
+          browserURL: "https://etherscan.io/",
+        },
+      },
+    ],
   },
 
   contractSizer: {
