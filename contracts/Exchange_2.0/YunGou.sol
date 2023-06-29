@@ -44,6 +44,12 @@ contract YunGou is Consideration {
         }
     }
 
+    function removeOrderHashs(
+        bytes32[] calldata orderHashs
+    ) external onlyOwner {
+        _removeOrderHashs(orderHashs);
+    }
+
     function excuteWithETH(
         BasicOrder calldata order,
         address receiver

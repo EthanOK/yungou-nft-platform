@@ -219,4 +219,13 @@ abstract contract Validator is
     ) internal view returns (OrderStatus memory _orderStatus) {
         _orderStatus = ordersStatus[orderHash];
     }
+
+    function _removeOrderHashs(bytes32[] calldata orderHashs) internal {
+        for (uint i = 0; i < orderHashs.length; ) {
+            delete ordersStatus[orderHashs[i]];
+            unchecked {
+                ++i;
+            }
+        }
+    }
 }

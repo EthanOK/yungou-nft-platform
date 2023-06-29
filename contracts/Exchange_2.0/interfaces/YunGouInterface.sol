@@ -28,6 +28,8 @@ interface YunGouInterface {
 
     function setPause() external;
 
+    function removeOrderHashs(bytes32[] calldata orderHashs) external;
+
     function excuteWithETH(
         BasicOrder calldata order,
         address receiver
