@@ -60,3 +60,6 @@ error FailedTransferFromERC721();
 
 // 0xfc009303
 error FailedSafeTransferFromERC1155();
+
+// 0xaa8d6c93
+error IncorrectOrdersLength();

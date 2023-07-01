@@ -83,3 +83,7 @@ function _revertFailedTransferFromERC721() pure {
 function _revertFailedSafeTransferFromERC1155() pure {
     revert FailedSafeTransferFromERC1155();
 }
+
+function _revertIncorrectOrdersLength() pure {
+    revert IncorrectOrdersLength();
+}

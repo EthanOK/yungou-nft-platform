@@ -57,13 +57,22 @@ abstract contract Consideration is Validator, Executor {
             receiver = _msgSender();
         }
 
+        uint256 length = orders.length;
+
+        if (length == 0) {
+            _revertIncorrectOrdersLength();
+        }
+
         uint256 valueETH = msg.value;
+
         uint256 currentTimestamp = block.timestamp;
+
         uint256 totalFee;
+
         uint256 totalPayment;
 
         {
-            for (uint i = 0; i < orders.length; ) {
+            for (uint i = 0; i < length; ) {
                 _verifyAndExcute(
                     orders[i],
                     receiver,

@@ -16,7 +16,8 @@ contract YunGou is Consideration {
 
         __ReentrancyGuard_init();
         __Pausable_init();
-        __Ownable_init();
+        // __Ownable_init();
+        _transferOwnership(tx.origin);
         __EIP712_init(NAME_YUNGOU, VERSION);
     }
 
