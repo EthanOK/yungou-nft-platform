@@ -19,6 +19,8 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// npx hardhat run scripts/deploy_Aggregators_T.js --network goerli
+// npx hardhat run scripts/deploy_Aggregators_T.js --network tbsc
 
-// npx hardhat verify --network tbsc 0x0000A8086590DD83c8bd58A787412026B86eB772 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
+// npx hardhat verify --network tbsc 0xC2F44737c69fc4E1361A181A6647322C31aced34 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
+
+// npx hardhat verify --network mainnet 0x0000007eE460B0928c2119E3B9747454A10d1557 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
