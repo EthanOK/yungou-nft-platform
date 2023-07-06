@@ -5,7 +5,7 @@ async function main() {
     "MarketRegistry"
   );
 
-  const marketRegistry = await YunGouMarketRegistry.deploy([], []);
+  const marketRegistry = await YunGouMarketRegistry.deploy();
 
   await marketRegistry.deployed();
 
@@ -19,4 +19,5 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_MarketRegistry_T.js --network goerli
 
-// npx hardhat verify --network goerli 0x5D5177aa0BD5ACeb22A249703DAe840667309F5d 0x3a9E49D9110Ce9f22338f86674A4d7B453BEe554
+// npx hardhat verify --network tbsc 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
+// npx hardhat verify --network mainnet 0x0000C882F269B5Ef434679cd0F50189AbF19cB27

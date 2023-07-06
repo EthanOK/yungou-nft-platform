@@ -73,7 +73,7 @@ module.exports = {
     customChains: [
       {
         network: "phalcon",
-        chainId: 1,
+        chainId: 11,
         urls: {
           apiURL: process.env.PHALCON_FORK_APIURL,
           browserURL: "https://etherscan.io/",

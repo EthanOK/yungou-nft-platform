@@ -4,6 +4,9 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MarketRegistry is Ownable {
+    address constant YunGou = 0x0000006C517Ed32ff128B33f137BB4ac31B0C6Dd;
+    address constant OpenSea = 0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC;
+
     struct TradeDetails {
         uint256 marketId;
         uint256 value;
@@ -18,10 +21,11 @@ contract MarketRegistry is Ownable {
 
     Market[] public markets;
 
-    constructor(address[] memory marketAddresses, bool[] memory isProxys) {
-        for (uint256 i = 0; i < marketAddresses.length; i++) {
-            markets.push(Market(marketAddresses[i], isProxys[i], true));
-        }
+    constructor() {
+        markets.push(Market(address(0), false, false));
+        markets.push(Market(YunGou, false, true));
+        markets.push(Market(OpenSea, false, true));
+        _transferOwnership(tx.origin);
     }
 
     function addMarket(address marketAddress, bool isProxy) external onlyOwner {
