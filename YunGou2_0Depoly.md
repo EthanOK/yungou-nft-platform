@@ -11,6 +11,10 @@ let initCodeHash = keccak256(initCode);
 let address = ethers.utils.getCreate2Address(from, salt, initCodeHash);
 ```
 
+# YunGou2.0
+
+initCode 均来自 hardhat 部署的测试合约的 inputdata，可直接使用 hardhat 脚本 验证合约。
+
 ## YunGou2.0 Implementation
 
 ```json
