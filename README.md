@@ -64,6 +64,10 @@ https://etherscan.io/address/0x4643b06debe49fce229a77ebc9e7c5c036b2cedc
 
 ## 三、NFT Exchange Platform
 
+ProxyAdmin:
+
+https://etherscan.io/address/0xc07d62085ea1a66de2377e12a49e2410203d0a46#readContract
+
 ## 1.YUNGOU Exchange 1.0
 
 1. UpgradeableProxy：
@@ -76,8 +80,24 @@ https://etherscan.io/address/0x93b161ce690251f629ceae8ca1f69ab29e3eb77b#code
 
 ## 2.YUNGOU Exchange 2.0
 
+Use [ImmutableCreate2Factory](https://etherscan.io/address/0x0000000000ffe8b47b3e2130213b802212439497#writeContract) Create Contracts
+
+1. UpgradeableProxy
+
+https://etherscan.io/address/0x0000006c517ed32ff128b33f137bb4ac31b0c6dd
+
+2. implementation contract
+
+https://etherscan.io/address/0x00000e14b01bffc5e55e11ff92b6d6b1156c5796#code
+
 ## 3.YunGouAggregators
+
+Use [ImmutableCreate2Factory](https://etherscan.io/address/0x0000000000ffe8b47b3e2130213b802212439497#writeContract) Create Contracts
 
 1. MarketRegistry
 
+   https://etherscan.io/address/0x0000c882f269b5ef434679cd0f50189abf19cb27
+
 2. YunGouAggregators
+
+   https://etherscan.io/address/0x0000007ee460b0928c2119e3b9747454a10d1557
