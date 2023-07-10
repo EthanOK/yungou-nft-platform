@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./MarketRegistry.sol";
 
-contract YunGouAggregator is Ownable, ReentrancyGuard {
+contract YunGouAggregatorV2 is Ownable, ReentrancyGuard {
     bytes4 constant SELECTOR_TRANSFERFROM_ERC20_SELECTOR = 0x23b872dd;
     bytes4 constant SELECTOR_TRANSFER_ERC20_SELECTOR = 0xa9059cbb;
 
@@ -44,7 +44,7 @@ contract YunGouAggregator is Ownable, ReentrancyGuard {
     function _trade(
         MarketRegistry.TradeDetails[] calldata _tradeDetails
     ) internal {
-        for (uint256 i = 0; i < _tradeDetails.length; i++) {
+        for (uint256 i = 0; i < _tradeDetails.length; ) {
             // get market details
             (address _market, bool _isProxy, bool _isActive) = marketRegistry
                 .markets(_tradeDetails[i].marketId);
@@ -59,6 +59,9 @@ contract YunGouAggregator is Ownable, ReentrancyGuard {
                 );
             // check if the call passed successfully
             _checkCallResult(success);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -71,4 +74,6 @@ contract YunGouAggregator is Ownable, ReentrancyGuard {
             }
         }
     }
+
+    receive() external payable {}
 }
