@@ -35,6 +35,11 @@ module.exports = {
       chainId: 5,
       accounts: [process.env.PRIVATE_KEY],
     },
+    bsc: {
+      url: process.env.BSC_URL,
+      chainId: 56,
+      accounts: [process.env.PRIVATE_KEY],
+    },
     tbsc: {
       url: process.env.TBSC_URL,
       chainId: 97,

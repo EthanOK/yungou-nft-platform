@@ -20,3 +20,5 @@ main().catch((error) => {
 // npx hardhat verify --network goerli 0x00000E14B01bffc5E55e11fF92B6d6B1156c5796
 
 // npx hardhat verify --network mainnet 0x00000E14B01bffc5E55e11fF92B6d6B1156c5796
+
+// npx hardhat verify --network bsc 0x00000E14B01bffc5E55e11fF92B6d6B1156c5796

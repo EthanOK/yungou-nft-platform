@@ -20,4 +20,7 @@ main().catch((error) => {
 // npx hardhat run scripts/deploy_MarketRegistry_T.js --network goerli
 
 // npx hardhat verify --network tbsc 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
+
+// npx hardhat verify --network bsc 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
+
 // npx hardhat verify --network mainnet 0x0000C882F269B5Ef434679cd0F50189AbF19cB27
