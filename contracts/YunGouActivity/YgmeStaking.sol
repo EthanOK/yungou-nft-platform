@@ -270,7 +270,7 @@ contract YgmeStaking is
         ygmeTotal -= uint128(length);
     }
 
-    // TODO: data = abi.encode(orderId, account, amount)
+    // data = abi.encode(orderId, account, amount)
     function withdrawERC20(
         bytes calldata data,
         bytes calldata signature
