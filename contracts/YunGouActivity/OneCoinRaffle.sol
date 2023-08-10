@@ -34,14 +34,21 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
         address[] winners;
     }
 
+    event Participate(
+        address indexed account,
+        uint256 indexed issueId,
+        uint256 count,
+        uint256 time
+    );
+
     // issueId => issueData
-    mapping(uint256 => issueData) private issueDatas;
+    mapping(uint256 => issueData) public issueDatas;
 
     // issueId => issueAccount
     mapping(uint256 => issueAccount) private issueAccounts;
 
     // account => issueId => count
-    mapping(address => mapping(uint256 => uint256)) private participationCount;
+    mapping(address => mapping(uint256 => uint256)) public participationCount;
 
     constructor(address owner, address operator) {
         _setupRole(DEFAULT_ADMIN_ROLE, tx.origin);
@@ -60,6 +67,10 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
         address token,
         uint256 amount
     ) external onlyRole(OWNER_ROLE) {
+        require(
+            issueId > 0 && issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
         issueData storage _issueData = issueDatas[issueId];
         _issueData.numberMax = numberMax;
         _issueData.countMaxPer = countMaxPer;
@@ -87,13 +98,48 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
         _issueData.payToken = PayToken(token, amount);
     }
 
+    function setPause() external onlyRole(OWNER_ROLE) {
+        if (!paused()) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
+    function getParticipants(
+        uint256 _issueId
+    ) external view returns (address[] memory) {
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+        return issueAccounts[_issueId].participants;
+    }
+
+    function getWinners(
+        uint256 _issueId
+    ) external view returns (address[] memory) {
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+        return issueAccounts[_issueId].winners;
+    }
+
     function participate(
         uint256 _issueId,
         uint256 count
-    ) external returns (bool) {
+    ) external whenNotPaused nonReentrant returns (bool) {
         address account = _msgSender();
 
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+
         issueData storage _issueData = issueDatas[_issueId];
+
+        require(!_issueData.openState, "The Issue Already Awarded");
 
         require(
             block.timestamp > _issueData.startTime &&
@@ -101,28 +147,38 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
             "Invalid Participate Time"
         );
 
-        uint256 count_p = participationCount[account][_issueId];
-
         unchecked {
-            uint256 count_current = count_p + count;
+            uint256 count_current = participationCount[account][_issueId] +
+                count;
 
             require(
                 count > 0 && count_current <= _issueData.countMaxPer,
-                "Invalid Count"
+                "Exceeding the Maximum Count Participation Per"
             );
 
             participationCount[account][_issueId] = count_current;
+
+            uint256 _numberCurrent = _issueData.numberCurrent + count;
+
+            require(
+                _numberCurrent <= _issueData.numberMax,
+                "Exceeding the Maximum Participation Limit"
+            );
+
+            _issueData.numberCurrent = uint64(_numberCurrent);
+
+            for (uint256 i = 0; i < count; ++i) {
+                issueAccounts[_issueId].participants.push(account);
+            }
         }
 
-        {
-            uint256 amountPay = count * _issueData.payToken.amount;
-            address token = _issueData.payToken.token;
-            _userPayToken(token, account, amountPay);
-        }
+        uint256 amountPay = count * _issueData.payToken.amount;
 
-        for (uint256 i = 0; i < count; ++i) {
-            issueAccounts[_issueId].participants.push(account);
-        }
+        address token = _issueData.payToken.token;
+
+        _userPayToken(token, account, amountPay);
+
+        emit Participate(account, _issueId, count, block.timestamp);
 
         return true;
     }
