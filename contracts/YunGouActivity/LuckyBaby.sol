@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -11,20 +10,29 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    address constant ZERO_ADDRESS = address(0);
+
+    // bytes4(keccak256("transfer(address,uint256)"))
+    bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
+
+    // bytes4(keccak256("transferFrom(address,address,uint256)"))
+    bytes4 constant ERC20_TRANSFERFROM_SELECTOR = 0x23b872dd;
 
     using Counters for Counters.Counter;
     Counters.Counter public currentIssueId;
-
-    struct PayToken {
-        address token;
-        uint256 amount;
+    enum PayType {
+        NATIVE,
+        ERC20
     }
-
     enum PrizeType {
         NATIVE,
         ERC20,
         ERC721
+    }
+
+    struct PayToken {
+        PayType payType;
+        address token;
+        uint256 amount;
     }
 
     struct Prize {
@@ -42,6 +50,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
         uint32 endTime;
         bool openState;
         PayToken payToken;
+        Prize prize;
     }
 
     struct issueAccount {
@@ -73,44 +82,56 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
         _setupRole(OPERATOR_ROLE, operator);
     }
 
-    function setIssueData(
+    function updataIssueData(
         uint256 issueId,
         uint64 numberMax,
         uint64 countMaxPer,
         uint32 startTime,
         uint32 endTime,
-        address token,
-        uint256 amount
+        PayToken calldata payToken,
+        Prize calldata prize
     ) external onlyRole(OWNER_ROLE) {
         require(
             issueId > 0 && issueId <= currentIssueId.current(),
             "Invalid  IssueId"
         );
+        require(startTime < endTime, "Invalid Time");
+
         issueData storage _issueData = issueDatas[issueId];
         _issueData.numberMax = numberMax;
         _issueData.countMaxPer = countMaxPer;
         _issueData.startTime = startTime;
         _issueData.endTime = endTime;
-        _issueData.payToken = PayToken(token, amount);
+        _issueData.payToken = payToken;
+        _issueData.prize = prize;
     }
 
-    function addNewIssueData(
+    function incrementNewIssue(
         uint64 numberMax,
         uint64 countMaxPer,
         uint32 startTime,
         uint32 endTime,
-        address token,
-        uint256 amount
+        PayToken calldata payToken,
+        Prize calldata prize
     ) external onlyRole(OWNER_ROLE) {
         currentIssueId.increment();
         uint256 _issueId = currentIssueId.current();
+
+        require(startTime < endTime, "Invalid Time");
+
+        if (prize.prizeType == PrizeType.ERC721) {
+            require(prize.tokenIds.length > 0, "Invalid Prize Data");
+        } else {
+            require(prize.amount > 0, "Invalid Prize Amount");
+        }
 
         issueData storage _issueData = issueDatas[_issueId];
         _issueData.numberMax = numberMax;
         _issueData.countMaxPer = countMaxPer;
         _issueData.startTime = startTime;
         _issueData.endTime = endTime;
-        _issueData.payToken = PayToken(token, amount);
+        _issueData.payToken = payToken;
+        _issueData.prize = prize;
     }
 
     function setPause() external onlyRole(OWNER_ROLE) {
@@ -119,6 +140,39 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
         } else {
             _unpause();
         }
+    }
+
+    function getNumberParticipants(
+        uint256 _issueId
+    ) external view returns (uint256) {
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+        return issueDatas[_issueId].numberCurrent;
+    }
+
+    function getNumberRemain(uint256 _issueId) external view returns (uint256) {
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+        return
+            issueDatas[_issueId].numberMax - issueDatas[_issueId].numberCurrent;
+    }
+
+    function getCountRemainOfAccount(
+        address _account,
+        uint256 _issueId
+    ) external view returns (uint256) {
+        require(
+            _issueId > 0 && _issueId <= currentIssueId.current(),
+            "Invalid  IssueId"
+        );
+        uint256 _count = issueDatas[_issueId].countMaxPer -
+            participationCount[_account][_issueId];
+
+        return _count;
     }
 
     function getParticipants(
@@ -188,11 +242,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
             }
         }
 
-        uint256 amountPay = count * _issueData.payToken.amount;
-
-        address token = _issueData.payToken.token;
-
-        _userPayToken(token, account, amountPay, ethAmount);
+        _userPayToken(account, _issueData.payToken, count, ethAmount);
 
         emit Participate(account, _issueId, count, block.timestamp);
 
@@ -205,25 +255,46 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function _userPayToken(
-        address token,
-        address from,
-        uint256 amount,
+        address userAccount,
+        PayToken memory payToken,
+        uint256 count,
         uint256 ethAmount
     ) private {
-        if (token == ZERO_ADDRESS) {
-            require(ethAmount >= amount, "Insufficient Payment");
+        uint256 amountPay = count * payToken.amount;
+
+        if (payToken.payType == PayType.NATIVE) {
+            require(ethAmount >= amountPay, "Insufficient Payment");
+
             unchecked {
-                uint256 remainAmount = ethAmount - amount;
+                uint256 remainAmount = ethAmount - amountPay;
                 if (remainAmount > 0) {
-                    payable(from).transfer(remainAmount);
+                    payable(userAccount).transfer(remainAmount);
                 }
             }
-        } else {
-            require(
-                IERC20(token).allowance(from, address(this)) >= amount,
-                "Insufficient Allowance"
+        } else if (payToken.payType == PayType.ERC20) {
+            _transferFromLowCall(
+                payToken.token,
+                userAccount,
+                address(this),
+                amountPay
             );
-            IERC20(token).transferFrom(from, address(this), amount);
         }
     }
+
+    function _transferFromLowCall(
+        address target,
+        address from,
+        address to,
+        uint256 value
+    ) private {
+        (bool success, bytes memory data) = target.call(
+            abi.encodeWithSelector(ERC20_TRANSFERFROM_SELECTOR, from, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "Low-level call failed"
+        );
+    }
+
+    receive() external payable {}
 }
