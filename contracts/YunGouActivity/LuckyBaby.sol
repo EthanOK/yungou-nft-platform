@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
+contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    address constant ZERO_ADDRESS = address(0);
 
     using Counters for Counters.Counter;
     Counters.Counter public currentIssueId;
@@ -17,6 +19,19 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
     struct PayToken {
         address token;
         uint256 amount;
+    }
+
+    enum PrizeType {
+        NATIVE,
+        ERC20,
+        ERC721
+    }
+
+    struct Prize {
+        PrizeType prizeType;
+        address token;
+        uint256 amount;
+        uint256[] tokenIds;
     }
 
     struct issueData {
@@ -129,8 +144,9 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
     function participate(
         uint256 _issueId,
         uint256 count
-    ) external whenNotPaused nonReentrant returns (bool) {
+    ) external payable whenNotPaused nonReentrant returns (bool) {
         address account = _msgSender();
+        uint256 ethAmount = msg.value;
 
         require(
             _issueId > 0 && _issueId <= currentIssueId.current(),
@@ -176,7 +192,7 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
 
         address token = _issueData.payToken.token;
 
-        _userPayToken(token, account, amountPay);
+        _userPayToken(token, account, amountPay, ethAmount);
 
         emit Participate(account, _issueId, count, block.timestamp);
 
@@ -191,8 +207,23 @@ contract OneCoinRaffle is AccessControl, Pausable, ReentrancyGuard {
     function _userPayToken(
         address token,
         address from,
-        uint256 amount
+        uint256 amount,
+        uint256 ethAmount
     ) private {
-        IERC20(token).transferFrom(from, address(this), amount);
+        if (token == ZERO_ADDRESS) {
+            require(ethAmount >= amount, "Insufficient Payment");
+            unchecked {
+                uint256 remainAmount = ethAmount - amount;
+                if (remainAmount > 0) {
+                    payable(from).transfer(remainAmount);
+                }
+            }
+        } else {
+            require(
+                IERC20(token).allowance(from, address(this)) >= amount,
+                "Insufficient Allowance"
+            );
+            IERC20(token).transferFrom(from, address(this), amount);
+        }
     }
 }
