@@ -39,21 +39,35 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     struct Prize {
+        // Prize Type
         PrizeType prizeType;
+        // The number of winners
         uint64 numberWinner;
+        // Token address
         address token;
+        //
         uint256[] amounts;
         uint256[] tokenIds;
     }
 
     struct IssueData {
+        // number of tickets sold
         uint64 numberCurrent;
+        // Number of tickets issued
         uint64 numberMax;
+        // The maximum number of tickets that can be bought per person
         uint64 countMaxPer;
+        // The number of people who have redeemed
+        uint64 numberRedeem;
+        // Start Time
         uint32 startTime;
+        // End Time
         uint32 endTime;
+        // The opening state of the prize pool
         bool openState;
+        // Pay Token
         PayToken payToken;
+        // Prize Data
         Prize prize;
     }
 
@@ -122,12 +136,20 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         );
         require(startTime < endTime, "Invalid Time");
 
-        require(prize.numberWinner > 0, "Invalid Number Winner");
+        require(prize.numberWinner > 0, "Invalid Number Of Winner");
+
+        require(
+            prize.amounts.length == prize.numberWinner,
+            "Invalid Prize amounts"
+        );
 
         if (prize.prizeType == PrizeType.ERC721) {
-            require(prize.tokenIds.length > 0, "Invalid Prize Data");
-        } else {
-            require(prize.amounts.length > 0, "Invalid Prize amounts");
+            uint256 _totalAmount = _getTotalAmount(prize.amounts);
+            require(
+                prize.tokenIds.length > 0 &&
+                    _totalAmount == prize.tokenIds.length,
+                "Invalid Prize Data"
+            );
         }
 
         IssueData storage _issueData = issueDatas[issueId];
@@ -152,12 +174,20 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
 
         require(startTime < endTime, "Invalid Time");
 
-        require(prize.numberWinner > 0, "Invalid Number Winner");
+        require(prize.numberWinner > 0, "Invalid Number Of Winner");
+
+        require(
+            prize.amounts.length == prize.numberWinner,
+            "Invalid Prize amounts"
+        );
 
         if (prize.prizeType == PrizeType.ERC721) {
-            require(prize.tokenIds.length > 0, "Invalid Prize Data");
-        } else {
-            require(prize.amounts.length > 0, "Invalid Prize amounts");
+            uint256 _totalAmount = _getTotalAmount(prize.amounts);
+            require(
+                prize.tokenIds.length > 0 &&
+                    _totalAmount == prize.tokenIds.length,
+                "Invalid Prize Data"
+            );
         }
 
         IssueData storage _issueData = issueDatas[_issueId];
@@ -346,7 +376,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 prize.tokenIds
             );
 
-            _batchTransferFrom(prize.token, account, _tokenIds);
+            _batchTransferFromERC721(prize.token, account, _tokenIds);
 
             emit RedeemPrize(
                 account,
@@ -383,7 +413,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         return _tokenIds;
     }
 
-    function _batchTransferFrom(
+    function _batchTransferFromERC721(
         address token,
         address account,
         uint256[] memory _tokenIds
@@ -526,6 +556,15 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
             success && (data.length == 0 || abi.decode(data, (bool))),
             "Low-level call failed"
         );
+    }
+
+    function _getTotalAmount(
+        uint256[] calldata amounts
+    ) private pure returns (uint256 total) {
+        uint256 _len = amounts.length;
+        for (uint i = 0; i < _len; ++i) {
+            total += amounts[i];
+        }
     }
 
     receive() external payable {}
