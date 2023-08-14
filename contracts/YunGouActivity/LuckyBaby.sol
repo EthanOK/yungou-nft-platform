@@ -73,9 +73,9 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     struct IssueAccount {
-        // All participants
+        // All participants in this issue
         address[] participants;
-        // All winners
+        // All winners in this issue
         address[] winners;
     }
 
