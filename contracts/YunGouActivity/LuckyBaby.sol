@@ -405,7 +405,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         WithdrawERC20Paras[] calldata paras
     ) external onlyRole(OWNER_ROLE) returns (bool) {
         uint256 _len = paras.length;
-        for (uint i = 0; i < _len; ++i) {
+        for (uint256 i = 0; i < _len; ++i) {
             if (paras[i].token == ZERO_ADDRESS) {
                 payable(paras[i].account).transfer(paras[i].amount);
             } else {
@@ -423,7 +423,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         WithdrawERC721Paras[] calldata paras
     ) external onlyRole(OWNER_ROLE) returns (bool) {
         uint256 _len = paras.length;
-        for (uint i = 0; i < _len; ++i) {
+        for (uint256 i = 0; i < _len; ++i) {
             _batchTransferFromERC721(
                 paras[i].token,
                 address(this),
@@ -527,7 +527,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint256[] calldata amounts
     ) private pure returns (uint256 total) {
         uint256 _len = amounts.length;
-        for (uint i = 0; i < _len; ++i) {
+        for (uint256 i = 0; i < _len; ++i) {
             total += amounts[i];
         }
     }
