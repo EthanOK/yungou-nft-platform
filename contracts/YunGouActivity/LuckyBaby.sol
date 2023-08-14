@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-
+    // 0x0000000000000000000000000000000000000000
+    address constant ZERO_ADDRESS = address(0);
     // bytes4(keccak256("transfer(address,uint256)"))
     bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
-
     // bytes4(keccak256("transferFrom(address,address,uint256)"))
     bytes4 constant ERC20_TRANSFERFROM_SELECTOR = 0x23b872dd;
 
@@ -88,6 +88,18 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint64 index;
         // Whether to redeem
         bool stateRedeem;
+    }
+
+    struct WithdrawERC20Paras {
+        address token;
+        address account;
+        uint256 amount;
+    }
+
+    struct WithdrawERC721Paras {
+        address token;
+        address account;
+        uint256[] tokenIds;
     }
 
     event Participate(
@@ -342,95 +354,6 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         return true;
     }
 
-    function _distribute(address account, uint256 _issueId) private {
-        uint256 index = accountStates[account][_issueId].index;
-
-        Prize memory prize = issueDatas[_issueId].prize;
-
-        require(index < prize.amounts.length, "Invalid Index");
-
-        uint256 amount = prize.amounts[index];
-
-        if (prize.prizeType == PrizeType.NATIVE) {
-            uint256[] memory _tokenIds;
-            payable(account).transfer(amount);
-
-            emit RedeemPrize(
-                account,
-                _issueId,
-                prize.prizeType,
-                prize.token,
-                amount,
-                _tokenIds,
-                block.timestamp
-            );
-        } else if (prize.prizeType == PrizeType.ERC20) {
-            uint256[] memory _tokenIds;
-            _transferLowCall(prize.token, account, amount);
-
-            emit RedeemPrize(
-                account,
-                _issueId,
-                prize.prizeType,
-                prize.token,
-                amount,
-                _tokenIds,
-                block.timestamp
-            );
-        } else if (prize.prizeType == PrizeType.ERC721) {
-            uint256[] memory _tokenIds = _getTokenIds(
-                index,
-                prize.amounts,
-                prize.tokenIds
-            );
-
-            _batchTransferFromERC721(prize.token, account, _tokenIds);
-
-            emit RedeemPrize(
-                account,
-                _issueId,
-                prize.prizeType,
-                prize.token,
-                amount,
-                _tokenIds,
-                block.timestamp
-            );
-        }
-    }
-
-    function _getTokenIds(
-        uint256 index,
-        uint256[] memory amounts,
-        uint256[] memory tokenIds
-    ) private pure returns (uint256[] memory) {
-        uint256 length = amounts[index];
-        uint256[] memory _tokenIds = new uint256[](length);
-
-        uint256 start = 0;
-
-        if (index > 0) {
-            for (uint256 j = 0; j < index; ++j) {
-                start += amounts[j];
-            }
-        }
-
-        for (uint256 j = 0; j < amounts[index]; ++j) {
-            _tokenIds[j] = tokenIds[j + start];
-        }
-
-        return _tokenIds;
-    }
-
-    function _batchTransferFromERC721(
-        address token,
-        address account,
-        uint256[] memory _tokenIds
-    ) private {
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            IERC721(token).transferFrom(address(this), account, _tokenIds[i]);
-        }
-    }
-
     function openPrizePool(
         uint256 _issueId
     ) external onlyRole(OPERATOR_ROLE) returns (bool) {
@@ -475,6 +398,40 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
             }
         }
         emit OpenPrizePool(_issueId, issueAccounts[_issueId].winners);
+        return true;
+    }
+
+    function withdrawERC20(
+        WithdrawERC20Paras[] calldata paras
+    ) external onlyRole(OWNER_ROLE) returns (bool) {
+        uint256 _len = paras.length;
+        for (uint i = 0; i < _len; ++i) {
+            if (paras[i].token == ZERO_ADDRESS) {
+                payable(paras[i].account).transfer(paras[i].amount);
+            } else {
+                _transferLowCall(
+                    paras[i].token,
+                    paras[i].account,
+                    paras[i].amount
+                );
+            }
+        }
+        return true;
+    }
+
+    function withdrawERC721(
+        WithdrawERC721Paras[] calldata paras
+    ) external onlyRole(OWNER_ROLE) returns (bool) {
+        uint256 _len = paras.length;
+        for (uint i = 0; i < _len; ++i) {
+            _batchTransferFromERC721(
+                paras[i].token,
+                address(this),
+                paras[i].account,
+                paras[i].tokenIds
+            );
+        }
+
         return true;
     }
 
@@ -556,7 +513,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         address target,
         address to,
         uint256 value
-    ) internal {
+    ) private {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, to, value)
         );
@@ -572,6 +529,101 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint256 _len = amounts.length;
         for (uint i = 0; i < _len; ++i) {
             total += amounts[i];
+        }
+    }
+
+    function _distribute(address account, uint256 _issueId) private {
+        uint256 index = accountStates[account][_issueId].index;
+
+        Prize memory prize = issueDatas[_issueId].prize;
+
+        require(index < prize.amounts.length, "Invalid Index");
+
+        uint256 amount = prize.amounts[index];
+
+        if (prize.prizeType == PrizeType.NATIVE) {
+            uint256[] memory _tokenIds;
+            payable(account).transfer(amount);
+
+            emit RedeemPrize(
+                account,
+                _issueId,
+                prize.prizeType,
+                prize.token,
+                amount,
+                _tokenIds,
+                block.timestamp
+            );
+        } else if (prize.prizeType == PrizeType.ERC20) {
+            uint256[] memory _tokenIds;
+            _transferLowCall(prize.token, account, amount);
+
+            emit RedeemPrize(
+                account,
+                _issueId,
+                prize.prizeType,
+                prize.token,
+                amount,
+                _tokenIds,
+                block.timestamp
+            );
+        } else if (prize.prizeType == PrizeType.ERC721) {
+            uint256[] memory _tokenIds = _getTokenIds(
+                index,
+                prize.amounts,
+                prize.tokenIds
+            );
+
+            _batchTransferFromERC721(
+                prize.token,
+                address(this),
+                account,
+                _tokenIds
+            );
+
+            emit RedeemPrize(
+                account,
+                _issueId,
+                prize.prizeType,
+                prize.token,
+                amount,
+                _tokenIds,
+                block.timestamp
+            );
+        }
+    }
+
+    function _getTokenIds(
+        uint256 index,
+        uint256[] memory amounts,
+        uint256[] memory tokenIds
+    ) private pure returns (uint256[] memory) {
+        uint256 length = amounts[index];
+        uint256[] memory _tokenIds = new uint256[](length);
+
+        uint256 start = 0;
+
+        if (index > 0) {
+            for (uint256 j = 0; j < index; ++j) {
+                start += amounts[j];
+            }
+        }
+
+        for (uint256 j = 0; j < amounts[index]; ++j) {
+            _tokenIds[j] = tokenIds[j + start];
+        }
+
+        return _tokenIds;
+    }
+
+    function _batchTransferFromERC721(
+        address token,
+        address from,
+        address to,
+        uint256[] memory _tokenIds
+    ) private {
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            IERC721(token).transferFrom(from, to, _tokenIds[i]);
         }
     }
 
