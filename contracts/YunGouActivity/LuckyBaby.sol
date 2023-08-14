@@ -86,6 +86,8 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint256 timeRedeem
     );
 
+    event OpenPrizePool(uint256 indexed issueId, address[] winners);
+
     // issueId => issueData
     mapping(uint256 => IssueData) public issueDatas;
 
@@ -404,10 +406,11 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
 
         _issueData.openState = true;
 
-        // Distribute Prizes
         uint256 numberWinner = _issueData.prize.numberWinner;
-        address[] memory _participants = issueAccounts[_issueId].participants;
+
+        address[] storage _participants = issueAccounts[_issueId].participants;
         uint256 numberParticipant = _participants.length;
+        require(numberParticipant > 0, "Nobody Participant");
         uint256 _number;
         uint256 i;
         unchecked {
@@ -433,7 +436,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 ++i;
             }
         }
-
+        emit OpenPrizePool(_issueId, issueAccounts[_issueId].winners);
         return true;
     }
 
@@ -442,7 +445,6 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         bytes32 seed_,
         uint256 _modulus
     ) private view returns (uint256) {
-        // TODO:random
         uint256 rand = uint256(
             keccak256(
                 abi.encodePacked(
@@ -458,8 +460,16 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     function _seed(uint256 _issueId) private view returns (bytes32) {
+        uint256 _end = issueAccounts[_issueId].participants.length - 1;
+
         return
-            keccak256(abi.encodePacked(issueAccounts[_issueId].participants));
+            keccak256(
+                abi.encodePacked(
+                    issueAccounts[_issueId].participants[0],
+                    issueAccounts[_issueId].participants[_end / 2],
+                    issueAccounts[_issueId].participants[_end]
+                )
+            );
     }
 
     function _userPayToken(
