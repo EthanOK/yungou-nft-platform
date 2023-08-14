@@ -45,13 +45,14 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint64 numberWinner;
         // Token address
         address token;
-        //
+        // Amount or quantity per winner
         uint256[] amounts;
+        // If PrizeType = ERC721, NFT tokenIds
         uint256[] tokenIds;
     }
 
     struct IssueData {
-        // number of tickets sold
+        // Number of tickets sold
         uint64 numberCurrent;
         // Number of tickets issued
         uint64 numberMax;
@@ -72,14 +73,20 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     struct IssueAccount {
+        // All participants
         address[] participants;
+        // All winners
         address[] winners;
     }
 
     struct AccountState {
+        // Participation times in issue
         uint64 countPart;
-        uint64 index;
+        // Whether to win
         bool stateWinner;
+        // If is winner, This is the index of the prize.amounts array
+        uint64 index;
+        // Whether to redeem
         bool stateRedeem;
     }
 
@@ -103,15 +110,16 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     event OpenPrizePool(uint256 indexed issueId, address[] winners);
 
     // issueId => issueData
+    // issueData per issue
     mapping(uint256 => IssueData) public issueDatas;
 
     // issueId => issueAccount
+    // issueAccount Data per issue
     mapping(uint256 => IssueAccount) private issueAccounts;
 
     // account => issueId => AccountState
+    // accountState per issue per account
     mapping(address => mapping(uint256 => AccountState)) public accountStates;
-
-    // account => issueId => winnerState
 
     constructor(address owner, address operator) {
         _setupRole(DEFAULT_ADMIN_ROLE, tx.origin);
