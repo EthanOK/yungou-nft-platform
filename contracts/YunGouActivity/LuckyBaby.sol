@@ -52,6 +52,8 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     struct IssueData {
+        // Number of current account
+        uint64 numberAccount;
         // Number of tickets sold
         uint64 numberCurrent;
         // Number of tickets issued
@@ -229,12 +231,13 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
 
     function getNumberParticipants(
         uint256 _issueId
-    ) external view returns (uint256) {
+    ) external view returns (uint256 numberCurr, uint256 numberAll) {
         require(
             _issueId > 0 && _issueId <= currentIssueId.current(),
             "Invalid  IssueId"
         );
-        return issueDatas[_issueId].numberCurrent;
+        numberCurr = issueDatas[_issueId].numberCurrent;
+        numberAll = issueDatas[_issueId].numberMax;
     }
 
     function getNumberRemain(uint256 _issueId) external view returns (uint256) {
@@ -312,6 +315,10 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 "Exceeding the Maximum Count Participation Per"
             );
 
+            if (accountStates[account][_issueId].countPart == 0) {
+                ++_issueData.numberAccount;
+            }
+
             accountStates[account][_issueId].countPart = uint64(count_current);
 
             uint256 _numberCurrent = _issueData.numberCurrent + count;
@@ -359,21 +366,32 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     ) external onlyRole(OPERATOR_ROLE) returns (bool) {
         IssueData storage _issueData = issueDatas[_issueId];
 
-        require(
-            block.timestamp > _issueData.endTime,
-            "Not Yet Time for Opening"
-        );
+        // require(
+        //     block.timestamp > _issueData.endTime,
+        //     "Not Yet Time for Opening"
+        // );
+
         require(!_issueData.openState, "The Issue Already Opened");
 
         _issueData.openState = true;
 
         uint256 numberWinner = _issueData.prize.numberWinner;
 
+        require(
+            _issueData.numberAccount > numberWinner * 2,
+            "Too Few Participants"
+        );
+
         address[] storage _participants = issueAccounts[_issueId].participants;
+
         uint256 numberParticipant = _participants.length;
+
         require(numberParticipant > 0, "Nobody Participant");
+
         uint256 _number;
+
         uint256 i;
+
         unchecked {
             while (_number < numberWinner) {
                 uint256 _random = _getRadom(
@@ -405,6 +423,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         WithdrawERC20Paras[] calldata paras
     ) external onlyRole(OWNER_ROLE) returns (bool) {
         uint256 _len = paras.length;
+
         for (uint256 i = 0; i < _len; ++i) {
             if (paras[i].token == ZERO_ADDRESS) {
                 payable(paras[i].account).transfer(paras[i].amount);
@@ -416,6 +435,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 );
             }
         }
+
         return true;
     }
 
@@ -423,6 +443,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         WithdrawERC721Paras[] calldata paras
     ) external onlyRole(OWNER_ROLE) returns (bool) {
         uint256 _len = paras.length;
+
         for (uint256 i = 0; i < _len; ++i) {
             _batchTransferFromERC721(
                 paras[i].token,
