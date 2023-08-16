@@ -446,14 +446,18 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint256[] calldata _issueIds
     ) private returns (bool) {
         uint256 _len = _issueIds.length;
+
         for (uint256 i = 0; i < _len; ++i) {
             require(issueDatas[_issueIds[i]].openState, "Not Open");
+
             require(
                 issueDatas[_issueIds[i]].numberRedeem ==
                     issueAccounts[_issueIds[i]].winners.length,
                 "Someone Not Claim Prize"
             );
+
             delete issueAccounts[_issueIds[i]];
+
             delete issueDatas[_issueIds[i]];
         }
         return true;
