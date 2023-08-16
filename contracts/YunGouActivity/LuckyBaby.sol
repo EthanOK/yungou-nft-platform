@@ -364,14 +364,14 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     function openPrizePool(
-        uint256 _issueId
+        uint256 _issueId,
+        uint256[] calldata _deleteIssueIds
     ) external onlyRole(OPERATOR_ROLE) returns (bool) {
         IssueData storage _issueData = issueDatas[_issueId];
 
-        // require(
-        //     block.timestamp > _issueData.endTime,
-        //     "Not Yet Time for Opening"
-        // );
+        if (_deleteIssueIds.length > 0) {
+            _deleteIssueDatas(_deleteIssueIds);
+        }
 
         require(!_issueData.openState, "The Issue Already Opened");
 
@@ -418,6 +418,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
             }
         }
         emit OpenPrizePool(_issueId, issueAccounts[_issueId].winners);
+
         return true;
     }
 
@@ -438,6 +439,23 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
             }
         }
 
+        return true;
+    }
+
+    function _deleteIssueDatas(
+        uint256[] calldata _issueIds
+    ) private returns (bool) {
+        uint256 _len = _issueIds.length;
+        for (uint256 i = 0; i < _len; ++i) {
+            require(issueDatas[_issueIds[i]].openState, "Not Open");
+            require(
+                issueDatas[_issueIds[i]].numberRedeem ==
+                    issueAccounts[_issueIds[i]].winners.length,
+                "Someone Not Claim Prize"
+            );
+            delete issueAccounts[_issueIds[i]];
+            delete issueDatas[_issueIds[i]];
+        }
         return true;
     }
 
