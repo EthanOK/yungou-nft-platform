@@ -356,6 +356,8 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
 
         accountStates[account][_issueId].stateRedeem = true;
 
+        ++issueDatas[_issueId].numberRedeem;
+
         _distribute(account, _issueId);
 
         return true;
