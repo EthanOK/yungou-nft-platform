@@ -374,75 +374,6 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         return true;
     }
 
-    function openPrizePool_2(
-        uint256 _issueId,
-        uint256[] calldata _deleteIssueIds
-    ) external onlyRole(OPERATOR_ROLE) returns (bool) {
-        IssueData storage _issueData = issueDatas[_issueId];
-
-        if (_deleteIssueIds.length > 0) {
-            _deleteIssueDatas(_deleteIssueIds);
-        }
-
-        require(!_issueData.openState, "The Issue Already Opened");
-
-        _issueData.openState = true;
-
-        uint256 numberWinner = _issueData.prize.numberWinner;
-
-        require(
-            _issueData.numberAccount > numberWinner * 2,
-            "Too Few Participants"
-        );
-
-        uint256 numberParticipant = _issueData.numberCurrent;
-
-        require(numberParticipant > 0, "Nobody Participant");
-
-        address[] storage _participants = issueAccounts[_issueId].participants;
-
-        uint256 _number;
-
-        uint256 i;
-
-        unchecked {
-            while (_number < numberWinner) {
-                uint256 _random = _getRadom(
-                    i,
-                    _seed(_issueId),
-                    numberParticipant
-                );
-                address accountRadom = _participants[_random];
-
-                if (!accountStates[accountRadom][_issueId].stateWinner) {
-                    accountStates[accountRadom][_issueId].stateWinner = true;
-
-                    issueAccounts[_issueId].winners.push(accountRadom);
-
-                    accountStates[accountRadom][_issueId].index = uint64(
-                        _number
-                    );
-
-                    ++_number;
-                }
-
-                // remove account in participants
-                _participants[_random] = _participants[numberParticipant - 1];
-                _participants.pop();
-
-                ++i;
-                --numberParticipant;
-            }
-        }
-        emit OpenPrizePool(
-            _issueId,
-            issueAccounts[_issueId].winners,
-            block.timestamp
-        );
-
-        return true;
-    }
-
     function openPrizePool(
         uint256 _issueId,
         uint256[] calldata _deleteIssueIds
@@ -497,6 +428,7 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 ++i;
             }
         }
+
         emit OpenPrizePool(
             _issueId,
             issueAccounts[_issueId].winners,
