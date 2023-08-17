@@ -108,7 +108,8 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         address indexed account,
         uint256 indexed issueId,
         uint256 count,
-        uint256 timeParticipate
+        uint256 timeParticipate,
+        uint256 numberCurrent
     );
 
     event RedeemPrize(
@@ -121,7 +122,11 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
         uint256 timeRedeem
     );
 
-    event OpenPrizePool(uint256 indexed issueId, address[] winners);
+    event OpenPrizePool(
+        uint256 indexed issueId,
+        address[] winners,
+        uint256 openTime
+    );
 
     // issueId => issueData
     // issueData per issue
@@ -337,7 +342,13 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
 
         _userPayToken(account, _issueData.payToken, count, ethAmount);
 
-        emit Participate(account, _issueId, count, block.timestamp);
+        emit Participate(
+            account,
+            _issueId,
+            count,
+            block.timestamp,
+            _issueData.numberCurrent
+        );
 
         return true;
     }
@@ -417,7 +428,11 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
                 ++i;
             }
         }
-        emit OpenPrizePool(_issueId, issueAccounts[_issueId].winners);
+        emit OpenPrizePool(
+            _issueId,
+            issueAccounts[_issueId].winners,
+            block.timestamp
+        );
 
         return true;
     }
