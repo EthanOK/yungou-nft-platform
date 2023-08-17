@@ -395,11 +395,11 @@ contract LuckyBaby is AccessControl, Pausable, ReentrancyGuard, ERC721Holder {
             "Too Few Participants"
         );
 
-        address[] storage _participants = issueAccounts[_issueId].participants;
-
-        uint256 numberParticipant = _participants.length;
+        uint256 numberParticipant = _issueData.numberCurrent;
 
         require(numberParticipant > 0, "Nobody Participant");
+
+        address[] storage _participants = issueAccounts[_issueId].participants;
 
         uint256 _number;
 
