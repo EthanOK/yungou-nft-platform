@@ -24,10 +24,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         }
     }
 
-    function setSlippageAccount(
-        address txPool,
-        uint256 feeRate
-    ) external onlyOwner {
+    function setTxPoolRate(address txPool, uint256 feeRate) external onlyOwner {
         isTransactionPools[txPool] = feeRate;
     }
 
