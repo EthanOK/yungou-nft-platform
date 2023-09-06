@@ -58,7 +58,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         } else {
             uint256 fees = (amount * isTransactionPools[owner]) / BASE_10000;
 
-            _transfer(slippageAccount, to, fees);
+            _transfer(owner, slippageAccount, fees);
 
             // Deduct slippage
             _transfer(owner, to, amount - fees);
