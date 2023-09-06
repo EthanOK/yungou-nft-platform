@@ -9,7 +9,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
 
     address private slippageAccount;
     // Base 10000
-    mapping(address => uint256) private isTransactionPairs;
+    mapping(address => uint256) private isTransactionPools;
 
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;
@@ -25,10 +25,18 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     }
 
     function setSlippageAccount(
-        address txPair,
+        address txPool,
         uint256 feeRate
     ) external onlyOwner {
-        isTransactionPairs[txPair] = feeRate;
+        isTransactionPools[txPool] = feeRate;
+    }
+
+    function getSlippageAccount() external view returns (address) {
+        return slippageAccount;
+    }
+
+    function getPoolRate(address txPool) external view returns (uint256) {
+        return isTransactionPools[txPool];
     }
 
     function setSlippageAccount(address _slippageAccount) external onlyOwner {
@@ -44,11 +52,14 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         uint256 amount
     ) public virtual override returns (bool) {
         address owner = _msgSender();
-        if (isTransactionPairs[owner] == 0) {
+
+        if (isTransactionPools[owner] == 0) {
             _transfer(owner, to, amount);
         } else {
-            uint256 fees = (amount * isTransactionPairs[owner]) / BASE_10000;
+            uint256 fees = (amount * isTransactionPools[owner]) / BASE_10000;
+
             _transfer(slippageAccount, to, fees);
+
             // Deduct slippage
             _transfer(owner, to, amount - fees);
         }
