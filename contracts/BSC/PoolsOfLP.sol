@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -107,20 +107,24 @@ interface IPancakePair {
     function initialize(address, address) external;
 }
 
-contract PoolsOfLP is Pausable, Ownable, ReentrancyGuard {
+contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
+    using Counters for Counters.Counter;
+    Counters.Counter public currentIssueId;
 
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     address public constant LPTOKEN_YGIO_USDT =
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
-
     address public constant ZERO_ADDRESS = address(0);
 
     struct StakeLPData {
+        address owner;
+        bool state;
         uint256 amount;
         uint256 income;
         uint64 startTime;
         uint64 endTime;
-        bool state;
     }
 
     string private poolName;
@@ -132,16 +136,16 @@ contract PoolsOfLP is Pausable, Ownable, ReentrancyGuard {
     // become Mine Owner Amount
     uint256 private amountBMO;
 
+    uint256 private _totalStakeLP;
+
     // invitee =>  inviter
     mapping(address => address) private inviters;
     // stake balance
     mapping(address => uint256) private balances;
 
-    mapping(address => mapping(uint256 => StakeLPData)) stakeLPDatas;
+    mapping(uint256 => StakeLPData) stakeLPDatas;
 
     mapping(address => uint256[]) stakeLPOrderIds;
-
-    mapping(uint256 => address) orderIdOwner;
 
     // TODO:_amount = 100_000 LP
     constructor(
@@ -149,12 +153,15 @@ contract PoolsOfLP is Pausable, Ownable, ReentrancyGuard {
         uint256 _amount,
         address _inviteeSigner
     ) {
+        _setupRole(DEFAULT_ADMIN_ROLE, tx.origin);
+        _setupRole(OWNER_ROLE, tx.origin);
+
         poolName = _poolName;
         amountBMO = _amount * 10e18;
         inviteeSigner = _inviteeSigner;
     }
 
-    function setPause() external onlyOwner {
+    function setPause() external onlyRole(OWNER_ROLE) {
         if (!paused()) {
             _pause();
         } else {
@@ -164,6 +171,10 @@ contract PoolsOfLP is Pausable, Ownable, ReentrancyGuard {
 
     function getPoolName() external view returns (string memory) {
         return poolName;
+    }
+
+    function getTotalStakeLP() external view returns (uint256) {
+        return _totalStakeLP;
     }
 
     function becomeMineOwner() external whenNotPaused nonReentrant {
@@ -180,6 +191,8 @@ contract PoolsOfLP is Pausable, Ownable, ReentrancyGuard {
         mineOwner = account;
 
         balances[account] += amountBMO;
+
+        _totalStakeLP += _totalStakeLP;
 
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             account,
