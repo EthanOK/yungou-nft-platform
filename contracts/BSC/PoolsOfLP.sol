@@ -110,7 +110,6 @@ interface IPancakePair {
 contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
     using Counters for Counters.Counter;
-    Counters.Counter public currentIssueId;
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -118,14 +117,31 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
     address public constant ZERO_ADDRESS = address(0);
 
+    uint256 public constant stakePeriod = 30 days;
+
+    enum StakeState {
+        STAKING,
+        UNSTAKE,
+        CONTINUESTAKE
+    }
+
     struct StakeLPData {
         address owner;
-        bool state;
+        StakeState state;
         uint256 amount;
         uint256 income;
         uint64 startTime;
         uint64 endTime;
     }
+
+    event StakeLP(
+        uint256 orderId,
+        address indexed account,
+        uint256 amount,
+        uint256 startTime,
+        uint256 endTime,
+        StakeState state
+    );
 
     string private poolName;
 
@@ -138,14 +154,16 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     uint256 private _totalStakeLP;
 
+    Counters.Counter public _currentStakeLPOrderId;
+
     // invitee =>  inviter
     mapping(address => address) private inviters;
     // stake balance
     mapping(address => uint256) private balances;
 
-    mapping(uint256 => StakeLPData) stakeLPDatas;
+    mapping(uint256 => StakeLPData) private stakeLPDatas;
 
-    mapping(address => uint256[]) stakeLPOrderIds;
+    mapping(address => uint256[]) private stakeLPOrderIds;
 
     // TODO:_amount = 100_000 LP
     constructor(
@@ -177,6 +195,10 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return _totalStakeLP;
     }
 
+    function getCurrentStakeLPOrderId() external view returns (uint256) {
+        return _currentStakeLPOrderId.current();
+    }
+
     function becomeMineOwner() external whenNotPaused nonReentrant {
         require(mineOwner == ZERO_ADDRESS, "mine owner exists");
 
@@ -192,8 +214,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         balances[account] += amountBMO;
 
-        _totalStakeLP += _totalStakeLP;
+        _totalStakeLP += amountBMO;
 
+        // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             account,
             address(this),
@@ -202,33 +225,76 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     }
 
     function participateStaking(
-        uint256 amount,
-        address inviter,
-        bytes calldata signature
-    ) external whenNotPaused nonReentrant onlyInvited(inviter, signature) {
-        address invitee = _msgSender();
+        uint256 _amountLP,
+        address _inviter,
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant onlyInvited(_inviter, _signature) {
+        address _invitee = _msgSender();
 
-        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(invitee);
+        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_invitee);
 
-        require(_balance >= amount && amount > 0, "Insufficient balance of LP");
+        require(
+            _balance >= _amountLP && _amountLP > 0,
+            "Insufficient balance of LP"
+        );
+
+        // TODO:caculate income
+        uint256 _income = _amountLP * 2;
+
+        _currentStakeLPOrderId.increment();
+
+        uint256 stakeLPOrderId = _currentStakeLPOrderId.current();
+
+        stakeLPDatas[stakeLPOrderId] = StakeLPData({
+            owner: _invitee,
+            state: StakeState.STAKING,
+            amount: _amountLP,
+            income: _income,
+            startTime: uint64(block.timestamp),
+            endTime: uint64(block.timestamp + stakePeriod)
+        });
+
+        balances[_invitee] += _amountLP;
+
+        _totalStakeLP += _amountLP;
+
+        stakeLPOrderIds[_invitee].push(stakeLPOrderId);
+
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
+            _invitee,
+            address(this),
+            _amountLP
+        );
+    }
+
+    function updateStakeLPDatas(
+        uint256 _stakeLPOrderId,
+        uint256 _endTime
+    ) external onlyRole(OPERATOR_ROLE) {
+        stakeLPDatas[_stakeLPOrderId].endTime = uint64(_endTime);
     }
 
     modifier onlyInvited(address inviter, bytes calldata signature) {
-        // Is the inviter valid?
-        require(
-            inviter == mineOwner || inviters[inviter] != ZERO_ADDRESS,
-            "Invalid inviter"
-        );
-
-        // Whether the invitee has been invited?
         address invitee = _msgSender();
 
-        bytes memory data = abi.encode(invitee, inviter, address(this));
+        if (invitee != mineOwner && inviters[invitee] == ZERO_ADDRESS) {
+            // Is the inviter valid?
+            require(
+                inviter == mineOwner || inviters[inviter] != ZERO_ADDRESS,
+                "Invalid inviter"
+            );
 
-        bytes32 hash = keccak256(data);
+            // Whether the invitee has been invited?
 
-        _verifySignature(hash, signature);
+            bytes memory data = abi.encode(invitee, inviter, address(this));
 
+            bytes32 hash = keccak256(data);
+
+            _verifySignature(hash, signature);
+
+            inviters[invitee] = inviter;
+        }
         _;
     }
 
