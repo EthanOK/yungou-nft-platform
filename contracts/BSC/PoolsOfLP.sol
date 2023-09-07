@@ -268,7 +268,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         );
 
         // TODO:caculate income
-        uint256 _income = _amountLP * 2;
+        uint256 _income = _caculateIncome(_amountLP);
 
         _currentStakeLPOrderId.increment();
 
@@ -336,5 +336,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address signer = hash.recover(signature);
 
         require(signer == inviteeSigner, "Invalid signature");
+    }
+
+    function _caculateIncome(uint256 _amount) internal pure returns (uint256) {
+        return _amount * 2;
     }
 }
