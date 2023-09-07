@@ -154,15 +154,15 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     uint256 private _totalStakeLP;
 
-    Counters.Counter public _currentStakeLPOrderId;
+    Counters.Counter private _currentStakeLPOrderId;
 
     // invitee =>  inviter
     mapping(address => address) private inviters;
-    // stake balance
+    // account => balance
     mapping(address => uint256) private balances;
-
+    // stakeLPOrderId => StakeLPData
     mapping(uint256 => StakeLPData) private stakeLPDatas;
-
+    // account => stakeLPOrderIds
     mapping(address => uint256[]) private stakeLPOrderIds;
 
     // TODO:_amount = 100_000 LP
@@ -197,6 +197,35 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     function getCurrentStakeLPOrderId() external view returns (uint256) {
         return _currentStakeLPOrderId.current();
+    }
+
+    function getStakeLPData(
+        uint256 _stakeLPOrderId
+    ) external view returns (StakeLPData memory) {
+        return stakeLPDatas[_stakeLPOrderId];
+    }
+
+    function getStakeLPOrderIdsOfAccount(
+        address _account
+    ) external view returns (uint256[] memory) {
+        return stakeLPOrderIds[_account];
+    }
+
+    function queryInviters(
+        address _invitee,
+        uint256 _numberLayers
+    ) external view returns (address[] memory) {
+        address[] memory _inviters = new address[](_numberLayers);
+
+        for (uint i = 0; i < _numberLayers; ++i) {
+            _invitee = inviters[_invitee];
+
+            if (_invitee == ZERO_ADDRESS) break;
+
+            _inviters[i] = _invitee;
+        }
+
+        return _inviters;
     }
 
     function becomeMineOwner() external whenNotPaused nonReentrant {
