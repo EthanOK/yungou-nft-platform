@@ -116,7 +116,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     address public constant LPTOKEN_YGIO_USDT =
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
     address public constant ZERO_ADDRESS = address(0);
-
+    uint256 public constant REWARDRATE_BASE = 10_000;
     uint256 public constant stakePeriod = 30 days;
 
     enum StakeState {
@@ -148,6 +148,10 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     address private inviteeSigner;
 
     address private mineOwner;
+    // max reward Level
+    uint8 public rewardLevelMax;
+    // reward Rates
+    uint32[8] private rewardRates;
 
     // become Mine Owner Amount
     uint256 private amountBMO;
@@ -164,6 +168,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     mapping(uint256 => StakeLPData) private stakeLPDatas;
     // account => stakeLPOrderIds
     mapping(address => uint256[]) private stakeLPOrderIds;
+    // inviter's Rewards
+    mapping(address => uint256) private inviterRewards;
 
     // TODO:_amount = 100_000 LP
     constructor(
@@ -177,6 +183,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         poolName = _poolName;
         amountBMO = _amount * 10e18;
         inviteeSigner = _inviteeSigner;
+
+        rewardRates = [uint32(500), 400, 300, 200, 100, 0, 0, 0];
+        rewardLevelMax = 5;
     }
 
     function setPause() external onlyRole(OWNER_ROLE) {
@@ -185,6 +194,18 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         } else {
             _unpause();
         }
+    }
+
+    function setRewardLevelMax(
+        uint8 _rewardLevelMax
+    ) external onlyRole(OWNER_ROLE) {
+        rewardLevelMax = _rewardLevelMax;
+    }
+
+    function updateRewardRates(
+        uint32[8] calldata _rewardRates
+    ) external onlyRole(OWNER_ROLE) {
+        rewardRates = _rewardRates;
     }
 
     function getPoolName() external view returns (string memory) {
@@ -215,7 +236,21 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address _invitee,
         uint256 _numberLayers
     ) external view returns (address[] memory) {
+        (address[] memory _inviters, ) = _queryInviters(
+            _invitee,
+            _numberLayers
+        );
+        return _inviters;
+    }
+
+    function _queryInviters(
+        address _invitee,
+        uint256 _numberLayers
+    ) internal view returns (address[] memory, uint256) {
         address[] memory _inviters = new address[](_numberLayers);
+
+        // The number of superiors of the invitee
+        uint256 _number;
 
         for (uint i = 0; i < _numberLayers; ++i) {
             _invitee = inviters[_invitee];
@@ -223,9 +258,11 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             if (_invitee == ZERO_ADDRESS) break;
 
             _inviters[i] = _invitee;
+
+            _number = i + 1;
         }
 
-        return _inviters;
+        return (_inviters, _number);
     }
 
     function becomeMineOwner() external whenNotPaused nonReentrant {
@@ -289,6 +326,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         stakeLPOrderIds[_invitee].push(stakeLPOrderId);
 
+        //update Inviter Reward
+        _updateInviterReward(_invitee, _income);
+
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             _invitee,
@@ -340,5 +380,22 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     function _caculateIncome(uint256 _amount) internal pure returns (uint256) {
         return _amount * 2;
+    }
+
+    function _updateInviterReward(address _invitee, uint256 _income) internal {
+        (address[] memory _inviters, uint256 _number) = _queryInviters(
+            _invitee,
+            rewardLevelMax
+        );
+        if (_number > 0) {
+            for (uint i = 0; i < _number; ++i) {
+                // caculate reward
+                uint256 _reward = (_income * rewardRates[i]) / REWARDRATE_BASE;
+
+                if (_reward > 0) {
+                    inviterRewards[_inviters[i]] += _reward;
+                }
+            }
+        }
     }
 }
