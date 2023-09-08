@@ -326,8 +326,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         stakeLPOrderIds[_invitee].push(stakeLPOrderId);
 
-        //update Inviter Reward
-        _updateInviterReward(_invitee, _income);
+        //update Inviters Reward
+        _updateInvitersReward(_invitee, _income);
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
@@ -382,7 +382,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return _amount * 2;
     }
 
-    function _updateInviterReward(address _invitee, uint256 _income) internal {
+    function _updateInvitersReward(address _invitee, uint256 _income) internal {
         (address[] memory _inviters, uint256 _number) = _queryInviters(
             _invitee,
             rewardLevelMax
