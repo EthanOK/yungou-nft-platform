@@ -50,6 +50,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     ) public virtual override returns (bool) {
         address owner = _msgSender();
 
+        // swap(pool => user) or removeLiquidity
         if (isTransactionPools[owner] == 0) {
             _transfer(owner, to, amount);
         } else {
@@ -60,6 +61,29 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
             // Deduct slippage
             _transfer(owner, to, amount - fees);
         }
+        return true;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+
+        //  addLiquidity or swap(user => pool)
+        if (isTransactionPools[to] == 0) {
+            _transfer(from, to, amount);
+        } else {
+            uint256 fees = (amount * isTransactionPools[to]) / BASE_10000;
+
+            _transfer(from, slippageAccount, fees);
+
+            // Deduct slippage
+            _transfer(from, to, amount - fees);
+        }
+
         return true;
     }
 
