@@ -107,6 +107,12 @@ interface IPancakePair {
     function initialize(address, address) external;
 }
 
+interface IYGIOStake {
+    function getMulFactor(
+        address account
+    ) external pure returns (uint256 numerator, uint256 denominator);
+}
+
 contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
     using Counters for Counters.Counter;
@@ -114,6 +120,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     address public constant LPTOKEN_YGIO_USDT =
+        0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
+    address public constant YGIO_STAKE =
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
@@ -126,12 +134,13 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     }
 
     struct StakeLPData {
-        address owner;
         StakeState state;
-        uint256 amount;
-        uint256 income;
-        uint64 startTime;
-        uint64 endTime;
+        uint256 amountLP;
+        uint256 amountLPWorking;
+        // 质押结算后累积收入（再次质押，或取消质押）
+        uint256 accruedIncomeYGIO;
+        uint64 startBlockNumber;
+        uint64 endBlockNumber;
     }
 
     event StakeLP(
@@ -147,9 +156,16 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     address private inviteeSigner;
 
+    // one Cycle have 10 Block
+    uint32 private oneCycle_BlockNumber = 10;
+    //  one Cycle YGIO Reward Per LP
+    uint256 private oneCycle_Reward = 10_000_000;
+
     address private mineOwner;
     // max reward Level
     uint8 public rewardLevelMax;
+
+    uint32 private poolOwnerRate;
     // reward Rates
     uint32[8] private rewardRates;
 
@@ -158,16 +174,18 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     uint256 private _totalStakeLP;
 
+    uint256 private balancePoolOwner;
+
     Counters.Counter private _currentStakeLPOrderId;
 
     // invitee =>  inviter
     mapping(address => address) private inviters;
-    // account => balance
-    mapping(address => uint256) private balances;
-    // stakeLPOrderId => StakeLPData
-    mapping(uint256 => StakeLPData) private stakeLPDatas;
+    // // account => balance
+    // mapping(address => uint256) private balances;
+    // account => StakeLPData
+    mapping(address => StakeLPData) private stakeLPDatas;
     // account => stakeLPOrderIds
-    mapping(address => uint256[]) private stakeLPOrderIds;
+    // mapping(address => uint256[]) private stakeLPOrderIds;
     // inviter's Rewards
     mapping(address => uint256) private inviterRewards;
 
@@ -186,6 +204,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         rewardRates = [uint32(500), 400, 300, 200, 100, 0, 0, 0];
         rewardLevelMax = 5;
+        poolOwnerRate = 200;
     }
 
     function setPause() external onlyRole(OWNER_ROLE) {
@@ -212,6 +231,10 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return poolName;
     }
 
+    function getPoolFactor() external view returns (uint256, uint256) {
+        return _getPoolFactor();
+    }
+
     function getTotalStakeLP() external view returns (uint256) {
         return _totalStakeLP;
     }
@@ -221,15 +244,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     }
 
     function getStakeLPData(
-        uint256 _stakeLPOrderId
-    ) external view returns (StakeLPData memory) {
-        return stakeLPDatas[_stakeLPOrderId];
-    }
-
-    function getStakeLPOrderIdsOfAccount(
         address _account
-    ) external view returns (uint256[] memory) {
-        return stakeLPOrderIds[_account];
+    ) external view returns (StakeLPData memory) {
+        return stakeLPDatas[_account];
     }
 
     function queryInviters(
@@ -265,26 +282,28 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return (_inviters, _number);
     }
 
-    function becomeMineOwner() external whenNotPaused nonReentrant {
+    function becomeMineOwner(
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant onlyNewPoolOwner(_signature) {
         require(mineOwner == ZERO_ADDRESS, "mine owner exists");
 
-        address account = _msgSender();
+        address poolOwner = _msgSender();
 
         // check condition
         require(
-            IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(account) >= amountBMO,
+            IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(poolOwner) >= amountBMO,
             "Insufficient balance of LP"
         );
 
-        mineOwner = account;
+        mineOwner = poolOwner;
 
-        balances[account] += amountBMO;
+        balancePoolOwner = amountBMO;
 
         _totalStakeLP += amountBMO;
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
-            account,
+            poolOwner,
             address(this),
             amountBMO
         );
@@ -295,54 +314,101 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address _inviter,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant onlyInvited(_inviter, _signature) {
-        address _invitee = _msgSender();
+        address _account = _msgSender();
 
-        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_invitee);
+        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
 
         require(
             _balance >= _amountLP && _amountLP > 0,
             "Insufficient balance of LP"
         );
+        // StakeState state;
+        // uint256 amountLP;
+        // uint256 amountLPWorking;
+        // // 质押结算后累积收入（再次质押，或取消质押）
+        // uint256 accruedIncomeYGIO;
+        // uint64 startBlockNumber;
+        // uint64 endBlockNumber;
 
-        // TODO:caculate income
-        uint256 _income = _caculateIncome(_amountLP);
+        StakeLPData storage _stakelPData = stakeLPDatas[_account];
 
-        _currentStakeLPOrderId.increment();
+        // The user has lp working
+        if (_stakelPData.amountLPWorking > 0) {
+            // caculate LP Working Reward
+            uint256 rewardYGIO = _caculateLPWorkingReward(
+                _account,
+                _stakelPData.amountLPWorking,
+                _stakelPData.startBlockNumber,
+                uint64(block.number)
+            );
 
-        uint256 stakeLPOrderId = _currentStakeLPOrderId.current();
+            _stakelPData.accruedIncomeYGIO += rewardYGIO;
 
-        stakeLPDatas[stakeLPOrderId] = StakeLPData({
-            owner: _invitee,
-            state: StakeState.STAKING,
-            amount: _amountLP,
-            income: _income,
-            startTime: uint64(block.timestamp),
-            endTime: uint64(block.timestamp + stakePeriod)
-        });
+            _stakelPData.amountLP += _amountLP;
 
-        balances[_invitee] += _amountLP;
+            uint256 _amountLPWorking = _getAmountLPWorking(
+                _account,
+                _stakelPData.amountLP
+            );
+
+            _stakelPData.amountLPWorking = _amountLPWorking;
+
+            _stakelPData.startBlockNumber = uint64(block.number);
+        } else {
+            _stakelPData.amountLP = _amountLP;
+
+            _stakelPData.amountLPWorking = _getAmountLPWorking(
+                _account,
+                _amountLP
+            );
+
+            _stakelPData.startBlockNumber = uint64(block.number);
+        }
 
         _totalStakeLP += _amountLP;
 
-        stakeLPOrderIds[_invitee].push(stakeLPOrderId);
-
         //update Inviters Reward
-        _updateInvitersReward(_invitee, _income);
+        // _updateInvitersReward(_invitee, _income);
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
-            _invitee,
+            _account,
             address(this),
             _amountLP
         );
     }
 
-    function updateStakeLPDatas(
-        uint256 _stakeLPOrderId,
-        uint256 _endTime
-    ) external onlyRole(OPERATOR_ROLE) {
-        stakeLPDatas[_stakeLPOrderId].endTime = uint64(_endTime);
+    // Return YGIO Reward(MUL Factor)
+    function _caculateLPWorkingReward(
+        address _account,
+        uint256 _amountLPWorking,
+        uint64 _startBlockNumber,
+        uint64 _endBlockNumber
+    ) internal view returns (uint256) {
+        // working Cycle Number
+        uint256 cycleNumber = (_endBlockNumber - _startBlockNumber) /
+            oneCycle_BlockNumber;
+
+        uint256 _reward = cycleNumber * oneCycle_Reward * _amountLPWorking;
+
+        // account Factor
+        (uint256 _numerator, uint256 _denominator) = IYGIOStake(YGIO_STAKE)
+            .getMulFactor(_account);
+
+        (uint256 _numeratorPool, uint256 _denominatorPool) = _getPoolFactor();
+
+        _reward =
+            (_reward * _numerator * _numeratorPool) /
+            (_denominator * _denominatorPool);
+        return _reward;
     }
+
+    // function updateStakeLPDatas(
+    //     uint256 _stakeLPOrderId,
+    //     uint256 _endTime
+    // ) external onlyRole(OPERATOR_ROLE) {
+    //     stakeLPDatas[_stakeLPOrderId].endTime = uint64(_endTime);
+    // }
 
     modifier onlyInvited(address inviter, bytes calldata signature) {
         address invitee = _msgSender();
@@ -355,7 +421,6 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             );
 
             // Whether the invitee has been invited?
-
             bytes memory data = abi.encode(invitee, inviter, address(this));
 
             bytes32 hash = keccak256(data);
@@ -364,6 +429,18 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
             inviters[invitee] = inviter;
         }
+        _;
+    }
+
+    modifier onlyNewPoolOwner(bytes calldata _signature) {
+        address poolOwner = _msgSender();
+
+        bytes memory data = abi.encode(poolOwner, address(this));
+
+        bytes32 hash = keccak256(data);
+
+        _verifySignature(hash, _signature);
+
         _;
     }
 
@@ -378,8 +455,10 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         require(signer == inviteeSigner, "Invalid signature");
     }
 
-    function _caculateIncome(uint256 _amount) internal pure returns (uint256) {
-        return _amount * 2;
+    function _getPoolFactor() internal view returns (uint256, uint256) {
+        // TODO 依据池子LP质押量动态变动
+        _totalStakeLP;
+        return (150, 100);
     }
 
     function _updateInvitersReward(address _invitee, uint256 _income) internal {
@@ -397,5 +476,17 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
                 }
             }
         }
+    }
+
+    function _getAmountLPWorking(
+        address _account,
+        uint256 _amountLP
+    ) internal returns (uint256 _amountLPWorking) {
+        (, uint256 _number) = _queryInviters(_account, rewardLevelMax);
+        uint32 rateSum;
+        for (uint i = 0; i < _number; i++) {
+            rateSum += rewardRates[0];
+        }
+        _amountLPWorking = _amountLP - (_amountLP * rateSum) / REWARDRATE_BASE;
     }
 }
