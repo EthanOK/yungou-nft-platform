@@ -186,12 +186,12 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     function queryInviters(
         address _invitee,
         uint256 _numberLayers
-    ) external view returns (address[] memory) {
-        (address[] memory _inviters, ) = _queryInviters(
+    ) external view returns (address[] memory, uint256) {
+        (address[] memory _inviters, uint256 _nubmer) = _queryInviters(
             _invitee,
             _numberLayers
         );
-        return _inviters;
+        return (_inviters, _nubmer);
     }
 
     function withdrawYGIO(
