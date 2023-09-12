@@ -137,7 +137,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         StakeState state;
         uint256 amountLP;
         uint256 amountLPWorking;
-        // 质押结算后累积收入（再次质押，或取消质押）
+        // Accumulated income after staking settlement (stake again, or cancel staking)
         uint256 accruedIncomeYGIO;
         uint64 startBlockNumber;
         uint64 endBlockNumber;
@@ -145,7 +145,6 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     struct InviterLPData {
         uint256 amountLPWorking;
-        // 邀请结算后累积收入
         uint256 accruedIncomeYGIO;
         uint64 startBlockNumber;
     }
@@ -240,6 +239,12 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     function getTotalStakeLP() external view returns (uint256) {
         return _totalStakeLP;
+    }
+
+    function getInviteTotalBenefit(
+        address _account
+    ) external view returns (uint256) {
+        InviterLPData memory _inviterLPData = inviterLPDatas[_account];
     }
 
     function getStakeTotalBenefit(
@@ -518,6 +523,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
                     _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
 
                     _inviterLPData.amountLPWorking += _rewardLPWorking;
+
+                    _inviterLPData.startBlockNumber = uint64(block.number);
                 }
             }
         }
@@ -554,6 +561,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
                     _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
 
                     _inviterLPData.amountLPWorking -= _rewardLPWorking;
+
+                    _inviterLPData.startBlockNumber = uint64(block.number);
                 }
             }
         }
