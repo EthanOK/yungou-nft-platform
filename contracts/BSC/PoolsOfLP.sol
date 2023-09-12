@@ -209,6 +209,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     function withdrawLPOnlymineOwner(
         uint256 _amount
     ) external whenNotPaused nonReentrant {
+        address _account = _msgSender();
+        require(_account == mineOwner, "must mineOwner");
         // 每日有限额
     }
 
@@ -238,7 +240,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         );
     }
 
-    function participateStaking(
+    function stakingLP(
         uint256 _amountLP,
         address _inviter,
         bytes calldata _signature
@@ -300,7 +302,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         );
     }
 
-    function unStake() external whenNotPaused nonReentrant {
+    function unStakeLP() external whenNotPaused nonReentrant {
         address _account = _msgSender();
 
         StakeLPData storage _stakeLPData = stakeLPDatas[_account];
