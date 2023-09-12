@@ -1,31 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 interface IPancakePair {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
-
-    function name() external pure returns (string memory);
-
-    function symbol() external pure returns (string memory);
-
     function decimals() external pure returns (uint8);
 
     function totalSupply() external view returns (uint);
 
     function balanceOf(address owner) external view returns (uint);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint);
-
-    function approve(address spender, uint value) external returns (bool);
 
     function transfer(address to, uint value) external returns (bool);
 
@@ -34,77 +20,6 @@ interface IPancakePair {
         address to,
         uint value
     ) external returns (bool);
-
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-
-    function PERMIT_TYPEHASH() external pure returns (bytes32);
-
-    function nonces(address owner) external view returns (uint);
-
-    function permit(
-        address owner,
-        address spender,
-        uint value,
-        uint deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    event Mint(address indexed sender, uint amount0, uint amount1);
-
-    event Burn(
-        address indexed sender,
-        uint amount0,
-        uint amount1,
-        address indexed to
-    );
-
-    event Swap(
-        address indexed sender,
-        uint amount0In,
-        uint amount1In,
-        uint amount0Out,
-        uint amount1Out,
-        address indexed to
-    );
-    event Sync(uint112 reserve0, uint112 reserve1);
-
-    function MINIMUM_LIQUIDITY() external pure returns (uint);
-
-    function factory() external view returns (address);
-
-    function token0() external view returns (address);
-
-    function token1() external view returns (address);
-
-    function getReserves()
-        external
-        view
-        returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
-
-    function price0CumulativeLast() external view returns (uint);
-
-    function price1CumulativeLast() external view returns (uint);
-
-    function kLast() external view returns (uint);
-
-    function mint(address to) external returns (uint liquidity);
-
-    function burn(address to) external returns (uint amount0, uint amount1);
-
-    function swap(
-        uint amount0Out,
-        uint amount1Out,
-        address to,
-        bytes calldata data
-    ) external;
-
-    function skim(address to) external;
-
-    function sync() external;
-
-    function initialize(address, address) external;
 }
 
 interface IYGIOStake {
@@ -115,7 +30,6 @@ interface IYGIOStake {
 
 contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
-    using Counters for Counters.Counter;
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -123,9 +37,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
     address public constant YGIO_STAKE =
         0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90;
+    address public constant YGIO = 0xb06DcE9ae21c3b9163cD933E40c9EE563366b783;
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
-    uint256 public constant stakePeriod = 30 days;
 
     enum StakeState {
         STAKING,
@@ -164,19 +78,22 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     // one Cycle have 10 Block
     uint32 private oneCycle_BlockNumber = 10;
-    //  one Cycle YGIO Reward Per LP
+
+    // one Cycle YGIO Reward Per LP
     uint256 private oneCycle_Reward = 10_000_000;
 
     address private mineOwner;
+
     // max reward Level
     uint8 public rewardLevelMax;
 
     uint32 private poolOwnerRate;
+
     // reward Rates
     uint32[8] private rewardRates;
 
     // become Mine Owner Amount
-    uint256 private amountBMO;
+    uint256 private amountMineOwner;
 
     uint256 private _totalStakeLP;
 
@@ -191,6 +108,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     // inviter => InviterLPData
     mapping(address => InviterLPData) private inviterLPDatas;
 
+    //address withdrawed YGIO SUM
+    mapping(address => uint256) amountWithdrawed;
+
     // TODO:_amount = 100_000 LP
     constructor(
         string memory _poolName,
@@ -201,12 +121,12 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         _setupRole(OWNER_ROLE, tx.origin);
 
         poolName = _poolName;
-        amountBMO = _amount * 10e18;
+        amountMineOwner = _amount * 10e18;
         inviteeSigner = _inviteeSigner;
+        // [mineOwner, inviter1,inviter2,...,inviter5]
+        rewardRates = [uint32(200), 500, 400, 300, 200, 100, 0, 0];
 
-        rewardRates = [uint32(500), 400, 300, 200, 100, 0, 0, 0];
         rewardLevelMax = 5;
-        poolOwnerRate = 200;
     }
 
     function setPause() external onlyRole(OWNER_ROLE) {
@@ -244,24 +164,17 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     function getInviteTotalBenefit(
         address _account
     ) external view returns (uint256) {
-        InviterLPData memory _inviterLPData = inviterLPDatas[_account];
+        return _getInviteTotalBenefit(_account);
+    }
+
+    function getTotalBenefit(address _account) external view returns (uint256) {
+        return _getTotalBenefit(_account);
     }
 
     function getStakeTotalBenefit(
         address _account
     ) external view returns (uint256) {
-        StakeLPData memory _stakeLPData = stakeLPDatas[_account];
-        if (_stakeLPData.endBlockNumber > _stakeLPData.startBlockNumber) {
-            return _stakeLPData.accruedIncomeYGIO;
-        } else {
-            uint256 _currentStakingReward = _caculateLPWorkingReward(
-                _account,
-                _stakeLPData.amountLPWorking,
-                _stakeLPData.startBlockNumber,
-                uint64(block.number)
-            );
-            return _currentStakingReward + _stakeLPData.accruedIncomeYGIO;
-        }
+        return _getStakeTotalBenefit(_account);
     }
 
     function getStakeLPData(
@@ -281,26 +194,22 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return _inviters;
     }
 
-    function _queryInviters(
-        address _invitee,
-        uint256 _numberLayers
-    ) internal view returns (address[] memory, uint256) {
-        address[] memory _inviters = new address[](_numberLayers);
+    function withdrawYGIO(
+        uint256 _amount
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
+        uint256 _total = _getTotalBenefit(_account);
+        uint256 _remain = _total - amountWithdrawed[_account];
+        require(_amount <= _remain, "Insufficient for withdrawal");
+        amountWithdrawed[_account] += _amount;
+        IERC20(YGIO).transfer(_account, _amount);
+        return true;
+    }
 
-        // The number of superiors of the invitee
-        uint256 _number;
-
-        for (uint i = 0; i < _numberLayers; ++i) {
-            _invitee = inviters[_invitee];
-
-            if (_invitee == ZERO_ADDRESS) break;
-
-            _inviters[i] = _invitee;
-
-            _number = i + 1;
-        }
-
-        return (_inviters, _number);
+    function withdrawLPOnlymineOwner(
+        uint256 _amount
+    ) external whenNotPaused nonReentrant {
+        // 每日有限额
     }
 
     function becomeMineOwner(
@@ -312,21 +221,20 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         // check condition
         require(
-            IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(poolOwner) >= amountBMO,
+            IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(poolOwner) >=
+                amountMineOwner,
             "Insufficient balance of LP"
         );
 
         mineOwner = poolOwner;
 
-        balancePoolOwner = amountBMO;
-
-        _totalStakeLP += amountBMO;
+        balancePoolOwner = amountMineOwner;
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             poolOwner,
             address(this),
-            amountBMO
+            amountMineOwner
         );
     }
 
@@ -412,8 +320,11 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         delete _stakeLPData.amountLP;
 
         _stakeLPData.endBlockNumber = uint64(block.number);
+
         // update Inviters Reward
         _updateInvitersRewardRemove(_account, _amountLP);
+
+        _totalStakeLP -= _amountLP;
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountLP);
     }
@@ -497,73 +408,79 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address _invitee,
         uint256 _amountLP
     ) internal {
-        (address[] memory _inviters, uint256 _number) = _queryInviters(
-            _invitee,
-            rewardLevelMax
-        );
-        if (_number > 0) {
-            for (uint i = 0; i < _number; ++i) {
-                InviterLPData storage _inviterLPData = inviterLPDatas[
-                    _inviters[i]
-                ];
-                uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
-                    REWARDRATE_BASE;
-                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
-                    _inviterLPData.amountLPWorking += _rewardLPWorking;
-                } else {
-                    // caculate reward YGIO
-                    uint256 _rewardOneBlockOneLP = oneCycle_Reward /
-                        oneCycle_BlockNumber;
+        (
+            address[] memory _mineOwnerAndInviters,
+            uint256 _number
+        ) = _queryMineOwnerAndInviters(_invitee, rewardLevelMax);
 
-                    uint256 _rewardYGIO = _rewardOneBlockOneLP *
-                        _inviterLPData.amountLPWorking *
-                        (uint64(block.number) -
-                            _inviterLPData.startBlockNumber);
+        for (uint i = 0; i < _number; ++i) {
+            InviterLPData storage _inviterLPData = inviterLPDatas[
+                _mineOwnerAndInviters[i]
+            ];
+            uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
+                REWARDRATE_BASE;
+            if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                _inviterLPData.amountLPWorking += _rewardLPWorking;
+            } else {
+                // caculate inviter reward YGIO
+                uint256 _inviterRewardYGIO = _caculateInviterRewardYGIO(
+                    _inviterLPData.amountLPWorking,
+                    _inviterLPData.startBlockNumber
+                );
 
-                    _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
+                _inviterLPData.accruedIncomeYGIO += _inviterRewardYGIO;
 
-                    _inviterLPData.amountLPWorking += _rewardLPWorking;
+                _inviterLPData.amountLPWorking += _rewardLPWorking;
 
-                    _inviterLPData.startBlockNumber = uint64(block.number);
-                }
+                _inviterLPData.startBlockNumber = uint64(block.number);
             }
         }
+    }
+
+    function _caculateInviterRewardYGIO(
+        uint256 _amountLPWorking,
+        uint256 _startBlockNumber
+    ) internal view returns (uint256) {
+        uint256 _rewardOneBlockOneLP = oneCycle_Reward / oneCycle_BlockNumber;
+
+        uint256 _inviterRewardYGIO = _rewardOneBlockOneLP *
+            _amountLPWorking *
+            (uint64(block.number - _startBlockNumber));
+
+        return _inviterRewardYGIO;
     }
 
     function _updateInvitersRewardRemove(
         address _invitee,
         uint256 _amountLP
     ) internal {
-        (address[] memory _inviters, uint256 _number) = _queryInviters(
-            _invitee,
-            rewardLevelMax
-        );
-        if (_number > 0) {
-            for (uint i = 0; i < _number; ++i) {
-                InviterLPData storage _inviterLPData = inviterLPDatas[
-                    _inviters[i]
-                ];
-                uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
-                    REWARDRATE_BASE;
+        (
+            address[] memory _mineOwnerAndInviters,
+            uint256 _number
+        ) = _queryMineOwnerAndInviters(_invitee, rewardLevelMax);
 
-                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
-                    _inviterLPData.amountLPWorking -= _rewardLPWorking;
-                } else {
-                    // caculate reward YGIO
-                    uint256 _rewardOneBlockOneLP = oneCycle_Reward /
-                        oneCycle_BlockNumber;
+        for (uint i = 0; i < _number; ++i) {
+            InviterLPData storage _inviterLPData = inviterLPDatas[
+                _mineOwnerAndInviters[i]
+            ];
 
-                    uint256 _rewardYGIO = _rewardOneBlockOneLP *
-                        _inviterLPData.amountLPWorking *
-                        (uint64(block.number) -
-                            _inviterLPData.startBlockNumber);
+            uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
+                REWARDRATE_BASE;
 
-                    _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
+            if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                _inviterLPData.amountLPWorking -= _rewardLPWorking;
+            } else {
+                // caculate inviter reward YGIO
+                uint256 _inviterRewardYGIO = _caculateInviterRewardYGIO(
+                    _inviterLPData.amountLPWorking,
+                    _inviterLPData.startBlockNumber
+                );
 
-                    _inviterLPData.amountLPWorking -= _rewardLPWorking;
+                _inviterLPData.accruedIncomeYGIO += _inviterRewardYGIO;
 
-                    _inviterLPData.startBlockNumber = uint64(block.number);
-                }
+                _inviterLPData.amountLPWorking -= _rewardLPWorking;
+
+                _inviterLPData.startBlockNumber = uint64(block.number);
             }
         }
     }
@@ -572,7 +489,10 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address _account,
         uint256 _amountLP
     ) internal view returns (uint256 _amountLPWorking) {
-        (, uint256 _number) = _queryInviters(_account, rewardLevelMax);
+        (, uint256 _number) = _queryMineOwnerAndInviters(
+            _account,
+            rewardLevelMax
+        );
 
         uint32 rateSum;
 
@@ -581,5 +501,88 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         }
 
         _amountLPWorking = _amountLP - (_amountLP * rateSum) / REWARDRATE_BASE;
+    }
+
+    function _getInviteTotalBenefit(
+        address _account
+    ) internal view returns (uint256) {
+        InviterLPData memory _inviterLPData = inviterLPDatas[_account];
+
+        uint256 _inviterRewardYGIO = _caculateInviterRewardYGIO(
+            _inviterLPData.amountLPWorking,
+            _inviterLPData.startBlockNumber
+        );
+
+        return _inviterLPData.accruedIncomeYGIO + _inviterRewardYGIO;
+    }
+
+    function _getStakeTotalBenefit(
+        address _account
+    ) internal view returns (uint256) {
+        if (_account == mineOwner) return 0;
+        StakeLPData memory _stakeLPData = stakeLPDatas[_account];
+        if (_stakeLPData.endBlockNumber > _stakeLPData.startBlockNumber) {
+            return _stakeLPData.accruedIncomeYGIO;
+        } else {
+            uint256 _currentStakingReward = _caculateLPWorkingReward(
+                _account,
+                _stakeLPData.amountLPWorking,
+                _stakeLPData.startBlockNumber,
+                uint64(block.number)
+            );
+            return _currentStakingReward + _stakeLPData.accruedIncomeYGIO;
+        }
+    }
+
+    function _queryMineOwnerAndInviters(
+        address _invitee,
+        uint256 _numberLayers
+    ) internal view returns (address[] memory, uint256) {
+        address[] memory _inviters = new address[](_numberLayers + 1);
+
+        _inviters[0] = mineOwner;
+
+        uint256 _number = 1;
+
+        for (uint i = 0; i < _numberLayers; ++i) {
+            _invitee = inviters[_invitee];
+
+            if (_invitee == ZERO_ADDRESS) break;
+
+            _inviters[i + 1] = _invitee;
+
+            _number = i + 1;
+        }
+
+        return (_inviters, _number);
+    }
+
+    function _queryInviters(
+        address _invitee,
+        uint256 _numberLayers
+    ) internal view returns (address[] memory, uint256) {
+        address[] memory _inviters = new address[](_numberLayers);
+
+        // The number of superiors of the invitee
+        uint256 _number;
+
+        for (uint i = 0; i < _numberLayers; ++i) {
+            _invitee = inviters[_invitee];
+
+            if (_invitee == ZERO_ADDRESS) break;
+
+            _inviters[i] = _invitee;
+
+            _number = i + 1;
+        }
+
+        return (_inviters, _number);
+    }
+
+    function _getTotalBenefit(
+        address _account
+    ) internal view returns (uint256) {
+        return
+            _getInviteTotalBenefit(_account) + _getStakeTotalBenefit(_account);
     }
 }
