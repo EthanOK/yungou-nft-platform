@@ -143,6 +143,13 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         uint64 endBlockNumber;
     }
 
+    struct InviterLPData {
+        uint256 amountLPWorking;
+        // 邀请结算后累积收入
+        uint256 accruedIncomeYGIO;
+        uint64 startBlockNumber;
+    }
+
     event StakeLP(
         uint256 orderId,
         address indexed account,
@@ -176,18 +183,14 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     uint256 private balancePoolOwner;
 
-    Counters.Counter private _currentStakeLPOrderId;
-
     // invitee =>  inviter
     mapping(address => address) private inviters;
-    // // account => balance
-    // mapping(address => uint256) private balances;
+
     // account => StakeLPData
     mapping(address => StakeLPData) private stakeLPDatas;
-    // account => stakeLPOrderIds
-    // mapping(address => uint256[]) private stakeLPOrderIds;
-    // inviter's Rewards
-    mapping(address => uint256) private inviterRewards;
+
+    // inviter => InviterLPData
+    mapping(address => InviterLPData) private inviterLPDatas;
 
     // TODO:_amount = 100_000 LP
     constructor(
@@ -239,8 +242,21 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return _totalStakeLP;
     }
 
-    function getCurrentStakeLPOrderId() external view returns (uint256) {
-        return _currentStakeLPOrderId.current();
+    function getStakeTotalBenefit(
+        address _account
+    ) external view returns (uint256) {
+        StakeLPData memory _stakeLPData = stakeLPDatas[_account];
+        if (_stakeLPData.endBlockNumber > _stakeLPData.startBlockNumber) {
+            return _stakeLPData.accruedIncomeYGIO;
+        } else {
+            uint256 _currentStakingReward = _caculateLPWorkingReward(
+                _account,
+                _stakeLPData.amountLPWorking,
+                _stakeLPData.startBlockNumber,
+                uint64(block.number)
+            );
+            return _currentStakingReward + _stakeLPData.accruedIncomeYGIO;
+        }
     }
 
     function getStakeLPData(
@@ -322,13 +338,6 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             _balance >= _amountLP && _amountLP > 0,
             "Insufficient balance of LP"
         );
-        // StakeState state;
-        // uint256 amountLP;
-        // uint256 amountLPWorking;
-        // // 质押结算后累积收入（再次质押，或取消质押）
-        // uint256 accruedIncomeYGIO;
-        // uint64 startBlockNumber;
-        // uint64 endBlockNumber;
 
         StakeLPData storage _stakelPData = stakeLPDatas[_account];
 
@@ -367,8 +376,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         _totalStakeLP += _amountLP;
 
-        //update Inviters Reward
-        // _updateInvitersReward(_invitee, _income);
+        // update Inviters Reward
+        _updateInvitersRewardAdd(_account, _amountLP);
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
@@ -376,6 +385,32 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             address(this),
             _amountLP
         );
+    }
+
+    function unStake() external whenNotPaused nonReentrant {
+        address _account = _msgSender();
+
+        StakeLPData storage _stakeLPData = stakeLPDatas[_account];
+
+        uint256 _currentStakingReward = _caculateLPWorkingReward(
+            _account,
+            _stakeLPData.amountLPWorking,
+            _stakeLPData.startBlockNumber,
+            uint64(block.number)
+        );
+        _stakeLPData.accruedIncomeYGIO += _currentStakingReward;
+
+        uint256 _amountLP = _stakeLPData.amountLP;
+
+        delete _stakeLPData.amountLPWorking;
+
+        delete _stakeLPData.amountLP;
+
+        _stakeLPData.endBlockNumber = uint64(block.number);
+        // update Inviters Reward
+        _updateInvitersRewardRemove(_account, _amountLP);
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountLP);
     }
 
     // Return YGIO Reward(MUL Factor)
@@ -403,22 +438,14 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return _reward;
     }
 
-    // function updateStakeLPDatas(
-    //     uint256 _stakeLPOrderId,
-    //     uint256 _endTime
-    // ) external onlyRole(OPERATOR_ROLE) {
-    //     stakeLPDatas[_stakeLPOrderId].endTime = uint64(_endTime);
-    // }
-
     modifier onlyInvited(address inviter, bytes calldata signature) {
         address invitee = _msgSender();
 
-        if (invitee != mineOwner && inviters[invitee] == ZERO_ADDRESS) {
+        require(invitee != mineOwner, "mine owner cannot participate");
+
+        if (inviters[invitee] == ZERO_ADDRESS) {
             // Is the inviter valid?
-            require(
-                inviter == mineOwner || inviters[inviter] != ZERO_ADDRESS,
-                "Invalid inviter"
-            );
+            require(inviters[inviter] != ZERO_ADDRESS, "Invalid inviter");
 
             // Whether the invitee has been invited?
             bytes memory data = abi.encode(invitee, inviter, address(this));
@@ -461,18 +488,72 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return (150, 100);
     }
 
-    function _updateInvitersReward(address _invitee, uint256 _income) internal {
+    function _updateInvitersRewardAdd(
+        address _invitee,
+        uint256 _amountLP
+    ) internal {
         (address[] memory _inviters, uint256 _number) = _queryInviters(
             _invitee,
             rewardLevelMax
         );
         if (_number > 0) {
             for (uint i = 0; i < _number; ++i) {
-                // caculate reward
-                uint256 _reward = (_income * rewardRates[i]) / REWARDRATE_BASE;
+                InviterLPData storage _inviterLPData = inviterLPDatas[
+                    _inviters[i]
+                ];
+                uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
+                    REWARDRATE_BASE;
+                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                    _inviterLPData.amountLPWorking += _rewardLPWorking;
+                } else {
+                    // caculate reward YGIO
+                    uint256 _rewardOneBlockOneLP = oneCycle_Reward /
+                        oneCycle_BlockNumber;
 
-                if (_reward > 0) {
-                    inviterRewards[_inviters[i]] += _reward;
+                    uint256 _rewardYGIO = _rewardOneBlockOneLP *
+                        _inviterLPData.amountLPWorking *
+                        (uint64(block.number) -
+                            _inviterLPData.startBlockNumber);
+
+                    _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
+
+                    _inviterLPData.amountLPWorking += _rewardLPWorking;
+                }
+            }
+        }
+    }
+
+    function _updateInvitersRewardRemove(
+        address _invitee,
+        uint256 _amountLP
+    ) internal {
+        (address[] memory _inviters, uint256 _number) = _queryInviters(
+            _invitee,
+            rewardLevelMax
+        );
+        if (_number > 0) {
+            for (uint i = 0; i < _number; ++i) {
+                InviterLPData storage _inviterLPData = inviterLPDatas[
+                    _inviters[i]
+                ];
+                uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
+                    REWARDRATE_BASE;
+
+                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                    _inviterLPData.amountLPWorking -= _rewardLPWorking;
+                } else {
+                    // caculate reward YGIO
+                    uint256 _rewardOneBlockOneLP = oneCycle_Reward /
+                        oneCycle_BlockNumber;
+
+                    uint256 _rewardYGIO = _rewardOneBlockOneLP *
+                        _inviterLPData.amountLPWorking *
+                        (uint64(block.number) -
+                            _inviterLPData.startBlockNumber);
+
+                    _inviterLPData.accruedIncomeYGIO += _rewardYGIO;
+
+                    _inviterLPData.amountLPWorking -= _rewardLPWorking;
                 }
             }
         }
@@ -481,12 +562,15 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     function _getAmountLPWorking(
         address _account,
         uint256 _amountLP
-    ) internal returns (uint256 _amountLPWorking) {
+    ) internal view returns (uint256 _amountLPWorking) {
         (, uint256 _number) = _queryInviters(_account, rewardLevelMax);
+
         uint32 rateSum;
+
         for (uint i = 0; i < _number; i++) {
             rateSum += rewardRates[0];
         }
+
         _amountLPWorking = _amountLP - (_amountLP * rateSum) / REWARDRATE_BASE;
     }
 }
