@@ -17,7 +17,6 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     struct StakingData {
         address owner;
         uint256 amount;
-        bool stakedState;
         uint128 startTime;
         uint128 endTime;
     }
@@ -28,7 +27,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 startTime,
         uint256 endTime,
-        StakeType stakeType
+        StakeType indexed stakeType,
+        uint256 indexed blockNumber
     );
     // constant:
     address public constant YGIO = 0xb06DcE9ae21c3b9163cD933E40c9EE563366b783;
@@ -134,7 +134,6 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         StakingData memory _data = StakingData({
             owner: _account,
             amount: _amount,
-            stakedState: true,
             startTime: uint128(block.timestamp),
             endTime: uint128(block.timestamp + _stakeTime)
         });
@@ -155,7 +154,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
             _amount,
             _data.startTime,
             _data.endTime,
-            StakeType.STAKING
+            StakeType.STAKING,
+            block.number
         );
         unchecked {
             ygioStakingTotal += _amount;
@@ -200,7 +200,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
                 _data.amount,
                 _data.startTime,
                 _data.endTime,
-                StakeType.UNSTAKE
+                StakeType.UNSTAKE,
+                block.number
             );
 
             _sumAmount += _data.amount;
@@ -221,7 +222,6 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256[] calldata _stakingOrderIds
     ) external onlyOwner {
         uint256 _length = _stakingOrderIds.length;
-        require(_length > 0, "Invalid stakeOrderIds");
 
         uint256 _sumAmount;
 
@@ -252,7 +252,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
                 _data.amount,
                 _data.startTime,
                 _data.endTime,
-                StakeType.UNSTAKEONLYOWNER
+                StakeType.UNSTAKEONLYOWNER,
+                block.number
             );
 
             _sumAmount += _data.amount;
