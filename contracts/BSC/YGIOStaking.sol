@@ -10,8 +10,9 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
 
     enum StakeType {
+        UNSTAKE,
         STAKING,
-        UNSTAKE
+        UNSTAKEONLYOWNER
     }
     struct StakingData {
         address owner;
@@ -40,7 +41,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     // account => stakingOrderIds
     mapping(address => uint256[]) private stakingOrderIds;
 
-    mapping(uint256 => StakingData) public stakingDatas;
+    // stakingOrderId => StakingData
+    mapping(uint256 => StakingData) private stakingDatas;
 
     Counters.Counter private _currentStakingOrderId;
 
@@ -79,10 +81,21 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         return stakingOrderIds[_account];
     }
 
+    function getStakingData(
+        uint256 _stakingOrderId
+    ) external view returns (StakingData memory) {
+        return stakingDatas[_stakingOrderId];
+    }
+
     function getMulFactor(
-        address account
-    ) external pure returns (uint256 numerator, uint256 denominator) {
-        return (150, 100);
+        address _account
+    ) external view returns (uint256 numerator, uint256 denominator) {
+        uint256 weight = _caculateStakingWeight(_account);
+
+        unchecked {
+            numerator = weight + ygioStakingTotal;
+            denominator = ygioStakingTotal;
+        }
     }
 
     //_level: 1 ~ 4
@@ -202,5 +215,69 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         }
 
         ygioStakingTotal -= _sumAmount;
+    }
+
+    function unStakeYGIOOnlyOwner(
+        uint256[] calldata _stakingOrderIds
+    ) external onlyOwner {
+        uint256 _length = _stakingOrderIds.length;
+        require(_length > 0, "Invalid stakeOrderIds");
+
+        uint256 _sumAmount;
+
+        for (uint256 i = 0; i < _length; ++i) {
+            uint256 _stakingOrderId = _stakingOrderIds[i];
+
+            StakingData memory _data = stakingDatas[_stakingOrderId];
+
+            address _account = _data.owner;
+
+            require(_data.amount > 0, "Invaild stakingOrderId");
+
+            uint256 _len = stakingOrderIds[_account].length;
+
+            for (uint256 j = 0; j < _len; ++j) {
+                if (stakingOrderIds[_account][j] == _stakingOrderId) {
+                    stakingOrderIds[_account][j] = stakingOrderIds[_account][
+                        _len - 1
+                    ];
+                    stakingOrderIds[_account].pop();
+                    break;
+                }
+            }
+
+            emit StakeYGIO(
+                _stakingOrderId,
+                _account,
+                _data.amount,
+                _data.startTime,
+                _data.endTime,
+                StakeType.UNSTAKEONLYOWNER
+            );
+
+            _sumAmount += _data.amount;
+
+            delete stakingDatas[_stakingOrderId];
+
+            IERC20(YGIO).transfer(_account, _data.amount);
+
+            if (stakingOrderIds[_account].length == 0) {
+                accountStakingTotal -= 1;
+            }
+        }
+
+        ygioStakingTotal -= _sumAmount;
+    }
+
+    function _caculateStakingWeight(
+        address _account
+    ) internal view returns (uint256) {
+        uint256 _number = stakingOrderIds[_account].length;
+        uint256 _sumAmount;
+        for (uint i = 0; i < _number; ++i) {
+            uint256 _stakingOrderId = stakingOrderIds[_account][i];
+            _sumAmount += stakingDatas[_stakingOrderId].amount;
+        }
+        return _sumAmount;
     }
 }
