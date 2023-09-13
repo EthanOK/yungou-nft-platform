@@ -210,14 +210,15 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         uint256 _amount
     ) external whenNotPaused nonReentrant {
         address _account = _msgSender();
-        require(_account == mineOwner, "must mineOwner");
-        // 每日有限额
+        require(_account == mineOwner, "Must mineOwner");
+        require(_amount <= balancePoolOwner, "Withdrawal restrictions");
+        // TODO 每日有限额
     }
 
     function becomeMineOwner(
         bytes calldata _signature
     ) external whenNotPaused nonReentrant onlyNewPoolOwner(_signature) {
-        require(mineOwner == ZERO_ADDRESS, "mine owner exists");
+        require(mineOwner == ZERO_ADDRESS, "Mine owner exists");
 
         address poolOwner = _msgSender();
 
@@ -359,7 +360,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     modifier onlyInvited(address inviter, bytes calldata signature) {
         address invitee = _msgSender();
 
-        require(invitee != mineOwner, "mine owner cannot participate");
+        require(invitee != mineOwner, "Mine owner cannot participate");
 
         if (inviters[invitee] == ZERO_ADDRESS) {
             // Is the inviter valid?
