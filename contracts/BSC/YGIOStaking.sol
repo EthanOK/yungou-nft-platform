@@ -144,6 +144,9 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
             _data.endTime,
             StakeType.STAKING
         );
+        unchecked {
+            ygioStakingTotal += _amount;
+        }
     }
 
     function unStakeYGIO(
@@ -152,6 +155,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256 _length = _stakingOrderIds.length;
         require(_length > 0, "Invalid stakeOrderIds");
         address _account = _msgSender();
+        uint256 _sumAmount;
 
         for (uint256 i = 0; i < _length; ++i) {
             uint256 _stakingOrderId = _stakingOrderIds[i];
@@ -186,6 +190,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
                 StakeType.UNSTAKE
             );
 
+            _sumAmount += _data.amount;
+
             delete stakingDatas[_stakingOrderId];
 
             IERC20(YGIO).transfer(_account, _data.amount);
@@ -195,6 +201,6 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
             accountStakingTotal -= 1;
         }
 
-        ygmeTotal -= uint128(length);
+        ygioStakingTotal -= _sumAmount;
     }
 }
