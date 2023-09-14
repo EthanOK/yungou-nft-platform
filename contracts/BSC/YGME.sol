@@ -1,21 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/utils/Counters.sol";
+
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-
-interface IERC20 {
-    function decimals() external view returns (uint8);
-
-    function transfer(address to, uint256 amount) external returns (bool);
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
-}
 
 interface IERC20USDT {
     function transferFrom(address from, address to, uint256 value) external;
