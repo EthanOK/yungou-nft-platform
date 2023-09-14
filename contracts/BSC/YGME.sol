@@ -28,7 +28,8 @@ contract YGME is ERC721, Ownable {
         address indexed account,
         uint256[] tokenIds,
         uint256 mintAmount,
-        uint256 payAmount
+        uint256 payAmount,
+        uint256 mintTime
     );
 
     address public constant ZERO_ADDRESS = address(0);
@@ -157,7 +158,7 @@ contract YGME is ERC721, Ownable {
 
         _rewardMint(from, mintNum);
 
-        emit MintYGME(from, _tokenIds, mintNum, _payAmount);
+        emit MintYGME(from, _tokenIds, mintNum, _payAmount, block.timestamp);
     }
 
     function setPay(uint256 pay) external onlyOwner {
