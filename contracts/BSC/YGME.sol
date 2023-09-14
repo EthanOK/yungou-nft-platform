@@ -326,6 +326,7 @@ contract YGME is ERC721, Ownable {
             _tokenIdCounter.current() + mintNum <= MAX,
             "already minted token of max"
         );
+
         _;
     }
 }
