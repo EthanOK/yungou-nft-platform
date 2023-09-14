@@ -24,6 +24,11 @@ interface IERC20USDT {
 }
 
 contract YGME is ERC721, Ownable {
+    using Counters for Counters.Counter;
+    using Strings for uint256;
+
+    address public constant ZERO_ADDRESS = address(0);
+
     event MintYGME(
         address indexed account,
         uint256[] tokenIds,
@@ -31,11 +36,6 @@ contract YGME is ERC721, Ownable {
         uint256 payAmount,
         uint256 mintTime
     );
-
-    address public constant ZERO_ADDRESS = address(0);
-
-    using Counters for Counters.Counter;
-    using Strings for uint256;
 
     Counters.Counter _tokenIdCounter;
 
