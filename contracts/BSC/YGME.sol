@@ -140,7 +140,7 @@ contract YGME is ERC721, Ownable {
 
         distribute(mintNum);
 
-        uint256[] memory _tokenIds = new uint[](mintNum);
+        uint256[] memory _tokenIds = new uint256[](mintNum);
 
         for (uint256 i = 0; i < mintNum; ++i) {
             _tokenIds[i] = _safeMint(from);
