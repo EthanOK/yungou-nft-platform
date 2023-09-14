@@ -189,6 +189,7 @@ contract YGME is ERC721, Ownable {
 
     function setLevelAmount(uint256 level, uint256 amount) external onlyOwner {
         require(level <= maxLevel, "level invalid");
+
         if (rewardLevelAmount[level] != amount) {
             rewardLevelAmount[level] = amount;
         }
@@ -196,6 +197,7 @@ contract YGME is ERC721, Ownable {
 
     function setReceiveFirst(address first, uint256 amount) external onlyOwner {
         receicve_address_first = first;
+
         receicve_amount_first = amount;
     }
 
@@ -204,6 +206,7 @@ contract YGME is ERC721, Ownable {
         uint256 amount
     ) external onlyOwner {
         receicve_address_second = second;
+
         receicve_amount_second = amount;
     }
 
@@ -289,15 +292,19 @@ contract YGME is ERC721, Ownable {
     }
 
     modifier checkRecommender(address _recommender) {
+        address _account = _msgSender();
+
         require(_recommender != ZERO_ADDRESS, "recommender can not be zero");
-        require(_recommender != msg.sender, "recommender can not be self");
+
+        require(_recommender != _account, "recommender can not be self");
+
         require(0 < balanceOf(_recommender), "invalid recommender");
 
-        if (recommender[msg.sender] == ZERO_ADDRESS) {
-            recommender[msg.sender] = _recommender;
+        if (recommender[_account] == ZERO_ADDRESS) {
+            recommender[_account] = _recommender;
         } else {
             require(
-                recommender[msg.sender] == _recommender,
+                recommender[_account] == _recommender,
                 "recommender is different"
             );
         }
@@ -314,8 +321,9 @@ contract YGME is ERC721, Ownable {
 
     modifier mintMax(uint256 mintNum) {
         require(0 < mintNum && mintNum <= MinMax, "mintNum invalid");
+
         require(
-            MAX >= _tokenIdCounter.current() + mintNum - 1,
+            _tokenIdCounter.current() + mintNum <= MAX,
             "already minted token of max"
         );
         _;
