@@ -24,6 +24,15 @@ interface IERC20USDT {
 }
 
 contract YGME is ERC721, Ownable {
+    event MintYGME(
+        address indexed account,
+        uint256[] tokenIds,
+        uint256 mintAmount,
+        uint256 payAmount
+    );
+
+    address public constant ZERO_ADDRESS = address(0);
+
     using Counters for Counters.Counter;
     using Strings for uint256;
 
@@ -35,28 +44,32 @@ contract YGME is ERC721, Ownable {
 
     uint256 public MinMax = 20;
 
+    uint256 public maxLevel = 3;
+
     mapping(address => bool) public isWhite;
 
     mapping(address => address) public recommender;
 
-    uint256 public maxLevel = 3;
     mapping(uint256 => uint256) public rewardLevelAmount;
 
     address receicve_address_first;
-    uint256 receicve_amount_first;
 
     address receicve_address_second;
-    uint256 receicve_amount_second;
 
     bool public start = true;
 
     bool lock;
+
+    uint256 receicve_amount_first;
+
+    uint256 receicve_amount_second;
 
     IERC20USDT payCon;
 
     IERC20 rewardCon;
 
     string public baseUri;
+
     string public orgUri;
 
     function totalSupply() external view returns (uint256) {
@@ -69,7 +82,9 @@ contract YGME is ERC721, Ownable {
         _requireMinted(tokenId);
 
         string memory baseURI = _baseURI();
+
         string memory orgURI = _orgURI();
+
         return
             bytes(orgURI).length > 0
                 ? string(abi.encodePacked(orgURI, tokenId.toString()))
@@ -84,6 +99,7 @@ contract YGME is ERC721, Ownable {
         payCon = IERC20USDT(pay);
 
         rewardCon = IERC20(reward);
+
         baseUri = _baseUri;
     }
 
@@ -99,6 +115,8 @@ contract YGME is ERC721, Ownable {
         baseUri = _baseUri;
     }
 
+    // Open blind box
+    // Demo:"ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/" or ""
     function setOrgURI(string calldata _orgUri) external onlyOwner {
         orgUri = _orgUri;
     }
@@ -108,7 +126,7 @@ contract YGME is ERC721, Ownable {
         address _recommender,
         uint256 mintNum
     ) external onlyWhiter mintMax(mintNum) isLock {
-        if (recommender[to] == address(0)) {
+        if (recommender[to] == ZERO_ADDRESS) {
             recommender[to] = _recommender;
         }
 
@@ -122,17 +140,24 @@ contract YGME is ERC721, Ownable {
         uint256 mintNum
     ) external checkRecommender(_recommender) mintMax(mintNum) isLock {
         require(start, "no start");
-        address from = _msgSender();
-        address self = address(this);
 
-        payCon.transferFrom(from, self, PAY * mintNum);
+        address from = _msgSender();
+
+        uint256 _payAmount = PAY * mintNum;
+
+        payCon.transferFrom(from, address(this), _payAmount);
+
         distribute(mintNum);
 
+        uint256[] memory _tokenIds;
+
         for (uint256 i = 0; i < mintNum; ++i) {
-            _safeMint(from);
+            _tokenIds[i] = _safeMint(from);
         }
 
         _rewardMint(from, mintNum);
+
+        emit MintYGME(from, _tokenIds, mintNum, _payAmount);
     }
 
     function setPay(uint256 pay) external onlyOwner {
@@ -208,15 +233,19 @@ contract YGME is ERC721, Ownable {
     }
 
     function distribute(uint256 mintNum) private {
-        address zero = address(0);
-        if (receicve_address_first != zero && 0 != receicve_amount_first) {
+        if (
+            receicve_address_first != ZERO_ADDRESS && 0 != receicve_amount_first
+        ) {
             payCon.transfer(
                 receicve_address_first,
                 receicve_amount_first * mintNum
             );
         }
 
-        if (receicve_address_second != zero && 0 != receicve_amount_second) {
+        if (
+            receicve_address_second != ZERO_ADDRESS &&
+            0 != receicve_amount_second
+        ) {
             payCon.transfer(
                 receicve_address_second,
                 receicve_amount_second * mintNum
@@ -224,15 +253,19 @@ contract YGME is ERC721, Ownable {
         }
     }
 
-    function _safeMint(address to) private {
+    function _safeMint(address to) private returns (uint256) {
         _tokenIdCounter.increment();
+
         uint256 tokenId = _tokenIdCounter.current();
+
         _safeMint(to, tokenId);
+
+        return tokenId;
     }
 
     function _rewardMint(address to, uint256 mintNum) private {
         address rewward;
-        address zero = address(0);
+
         for (uint256 i = 0; i <= maxLevel; ++i) {
             if (0 == i) {
                 rewward = to;
@@ -240,7 +273,7 @@ contract YGME is ERC721, Ownable {
                 rewward = recommender[rewward];
             }
 
-            if (rewward != zero && 0 != rewardLevelAmount[i]) {
+            if (rewward != ZERO_ADDRESS && 0 != rewardLevelAmount[i]) {
                 rewardCon.transfer(rewward, rewardLevelAmount[i] * mintNum);
             }
         }
@@ -255,11 +288,11 @@ contract YGME is ERC721, Ownable {
     }
 
     modifier checkRecommender(address _recommender) {
-        require(_recommender != address(0), "recommender can not be zero");
+        require(_recommender != ZERO_ADDRESS, "recommender can not be zero");
         require(_recommender != msg.sender, "recommender can not be self");
         require(0 < balanceOf(_recommender), "invalid recommender");
 
-        if (recommender[msg.sender] == address(0)) {
+        if (recommender[msg.sender] == ZERO_ADDRESS) {
             recommender[msg.sender] = _recommender;
         } else {
             require(
