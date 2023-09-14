@@ -19,13 +19,13 @@ contract YGME is ERC721, Ownable {
 
     address public constant ZERO_ADDRESS = address(0);
 
-    event MintYGME(
-        address indexed account,
-        uint256[] tokenIds,
-        uint256 mintAmount,
-        uint256 payAmount,
-        uint256 mintTime
-    );
+    // event MintYGME(
+    //     address indexed account,
+    //     uint256[] tokenIds,
+    //     uint256 mintAmount,
+    //     uint256 payAmount,
+    //     uint256 mintTime
+    // );
 
     Counters.Counter _tokenIdCounter;
 
@@ -140,15 +140,16 @@ contract YGME is ERC721, Ownable {
 
         distribute(mintNum);
 
-        uint256[] memory _tokenIds = new uint256[](mintNum);
+        // uint256[] memory _tokenIds = new uint256[](mintNum);
 
         for (uint256 i = 0; i < mintNum; ++i) {
-            _tokenIds[i] = _safeMint(from);
+            // _tokenIds[i] = _safeMint(from);
+            _safeMint(from);
         }
 
         _rewardMint(from, mintNum);
 
-        emit MintYGME(from, _tokenIds, mintNum, _payAmount, block.timestamp);
+        // emit MintYGME(from, _tokenIds, mintNum, _payAmount, block.timestamp);
     }
 
     function setPay(uint256 pay) external onlyOwner {
