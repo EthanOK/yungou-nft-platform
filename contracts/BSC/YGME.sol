@@ -15,7 +15,7 @@ contract YGME is ERC721, Ownable {
 
     Counters.Counter _tokenIdCounter;
 
-    uint256 MAX = 10000;
+    uint256 public MAX = 10000;
 
     uint256 public PAY = 300 * 1e18;
 
