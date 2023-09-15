@@ -7,29 +7,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-interface IERC20USDT {
-    function transferFrom(address from, address to, uint256 value) external;
-
-    function transfer(address to, uint256 value) external;
-}
-
 contract YGME is ERC721, Ownable {
     using Counters for Counters.Counter;
     using Strings for uint256;
 
     address public constant ZERO_ADDRESS = address(0);
 
-    // event MintYGME(
-    //     address indexed account,
-    //     uint256[] tokenIds,
-    //     uint256 mintAmount,
-    //     uint256 payAmount,
-    //     uint256 mintTime
-    // );
-
     Counters.Counter _tokenIdCounter;
 
-    uint256 MAX = 30000;
+    uint256 MAX = 10000;
 
     uint256 public PAY = 300 * 1e18;
 
@@ -55,13 +41,30 @@ contract YGME is ERC721, Ownable {
 
     uint256 receicve_amount_second;
 
-    IERC20USDT payCon;
+    IERC20 payCon;
 
     IERC20 rewardCon;
 
     string public baseUri;
 
     string public orgUri;
+
+    constructor(
+        address pay,
+        address reward,
+        address newOwner,
+        string memory _baseUri
+    ) ERC721("YGME", "YGME") {
+        payCon = IERC20(pay);
+
+        rewardCon = IERC20(reward);
+
+        isWhite[reward] = start;
+
+        _transferOwnership(newOwner);
+
+        baseUri = _baseUri;
+    }
 
     function totalSupply() external view returns (uint256) {
         return _tokenIdCounter.current();
@@ -82,18 +85,6 @@ contract YGME is ERC721, Ownable {
                 : baseURI;
     }
 
-    constructor(
-        address pay,
-        address reward,
-        string memory _baseUri
-    ) ERC721("YGME", "YGME") {
-        payCon = IERC20USDT(pay);
-
-        rewardCon = IERC20(reward);
-
-        baseUri = _baseUri;
-    }
-
     function _baseURI() internal view override returns (string memory) {
         return baseUri;
     }
@@ -106,9 +97,13 @@ contract YGME is ERC721, Ownable {
         baseUri = _baseUri;
     }
 
-    // Open blind box
-    // Demo:"ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/" or ""
+    function setRewardCon(address _rewardCon) external onlyOwner {
+        rewardCon = IERC20(_rewardCon);
+    }
+
+    // Open Box
     function setOrgURI(string calldata _orgUri) external onlyOwner {
+        // "ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/" or ""
         orgUri = _orgUri;
     }
 
@@ -140,16 +135,11 @@ contract YGME is ERC721, Ownable {
 
         distribute(mintNum);
 
-        // uint256[] memory _tokenIds = new uint256[](mintNum);
-
         for (uint256 i = 0; i < mintNum; ++i) {
-            // _tokenIds[i] = _safeMint(from);
             _safeMint(from);
         }
 
         _rewardMint(from, mintNum);
-
-        // emit MintYGME(from, _tokenIds, mintNum, _payAmount, block.timestamp);
     }
 
     function setPay(uint256 pay) external onlyOwner {
