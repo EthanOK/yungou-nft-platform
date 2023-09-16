@@ -76,17 +76,19 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     address private inviteeSigner;
 
-    // one Cycle have 10 Block
-    uint32 private oneCycle_BlockNumber = 10;
+    // one Cycle have 1 Block
+    uint32 private oneCycle_BlockNumber = 1;
 
     // one Cycle YGIO Reward Per LP
     uint256 private oneCycle_Reward = 10_000_000;
 
+    // Mine Owner
     address private mineOwner;
 
     // max reward Level
     uint8 public rewardLevelMax;
 
+    // Mine Owner reward rate
     uint32 private poolOwnerRate;
 
     // reward Rates
@@ -95,9 +97,23 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     // become Mine Owner Amount
     uint256 private amountMineOwner;
 
-    uint256 private _totalStakeLP;
+    // total Staking LP Amount(Not included Balance of Pool Mine Owner)
+    uint256 private totalStakingLP;
 
+    // balance Pool Mine Owner
     uint256 private balancePoolOwner;
+
+    // current Withdraw LP Amount Mine Owner
+    uint256 private currentWithdrawLPAmount;
+
+    // in one Cycle StakingVolume total StakingVolume
+    uint256 private StakingVolumeInOneCycle;
+
+    // oneCycle Of Update Withdraw LP Amount
+    uint128 private oneCycle_Days = 1 days;
+
+    // lastest Update Time Of Withdraw LP Amount
+    uint128 private lastestUpdateTime;
 
     // invitee =>  inviter
     mapping(address => address) private inviters;
@@ -118,11 +134,15 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         address _inviteeSigner
     ) {
         _setupRole(DEFAULT_ADMIN_ROLE, tx.origin);
+
         _setupRole(OWNER_ROLE, tx.origin);
 
         poolName = _poolName;
+
         amountMineOwner = _amount * 10e18;
+
         inviteeSigner = _inviteeSigner;
+
         // [mineOwner, inviter1,inviter2,...,inviter5]
         rewardRates = [uint32(200), 500, 400, 300, 200, 100, 0, 0];
 
@@ -158,7 +178,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     }
 
     function getTotalStakeLP() external view returns (uint256) {
-        return _totalStakeLP;
+        return totalStakingLP;
     }
 
     function getInviteTotalBenefit(
@@ -213,15 +233,33 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         return true;
     }
 
-    function withdrawLPOnlymineOwner(
+    function withdrawLPOnlyMineOwner(
         uint256 _amount
-    ) external whenNotPaused nonReentrant {
+    ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
         require(_account == mineOwner, "Must mineOwner");
 
-        require(_amount <= balancePoolOwner, "Withdrawal restrictions");
-        // TODO 每日有限额
+        require(_amount <= currentWithdrawLPAmount, "Withdrawal restrictions");
+
+        require(_amount <= balancePoolOwner, "Insufficient balancePoolOwner");
+
+        currentWithdrawLPAmount -= _amount;
+
+        balancePoolOwner -= _amount;
+
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amount);
+
+        return true;
+    }
+
+    function getCurrentWithdrawLPAmountOfMineOwner()
+        internal
+        view
+        returns (uint256)
+    {
+        return currentWithdrawLPAmount;
     }
 
     function becomeMineOwner(
@@ -241,6 +279,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         mineOwner = poolOwner;
 
         balancePoolOwner = amountMineOwner;
+
+        lastestUpdateTime = uint128(block.timestamp);
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
@@ -299,10 +339,12 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             _stakelPData.startBlockNumber = uint64(block.number);
         }
 
-        _totalStakeLP += _amountLP;
+        totalStakingLP += _amountLP;
 
         // update Inviters Reward
         _updateInvitersRewardAdd(_account, _amountLP);
+
+        _updateWithdrawLPAmount(_amountLP);
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
@@ -336,7 +378,8 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         // update Inviters Reward
         _updateInvitersRewardRemove(_account, _amountLP);
 
-        _totalStakeLP -= _amountLP;
+        totalStakingLP -= _amountLP;
+
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountLP);
     }
@@ -352,18 +395,26 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         uint256 cycleNumber = (_endBlockNumber - _startBlockNumber) /
             oneCycle_BlockNumber;
 
-        uint256 _reward = cycleNumber * oneCycle_Reward * _amountLPWorking;
+        if (cycleNumber == 0) {
+            return 0;
+        } else {
+            uint256 _reward = cycleNumber * oneCycle_Reward * _amountLPWorking;
 
-        // account Factor
-        (uint256 _numerator, uint256 _denominator) = IYGIOStake(YGIO_STAKE)
-            .getMulFactor(_account);
+            // account Factor
+            (uint256 _numerator, uint256 _denominator) = IYGIOStake(YGIO_STAKE)
+                .getMulFactor(_account);
 
-        (uint256 _numeratorPool, uint256 _denominatorPool) = _getPoolFactor();
+            (
+                uint256 _numeratorPool,
+                uint256 _denominatorPool
+            ) = _getPoolFactor();
 
-        _reward =
-            (_reward * _numerator * _numeratorPool) /
-            (_denominator * _denominatorPool);
-        return _reward;
+            _reward =
+                (_reward * _numerator * _numeratorPool) /
+                (_denominator * _denominatorPool);
+
+            return _reward;
+        }
     }
 
     modifier onlyInvited(address inviter, bytes calldata signature) {
@@ -412,8 +463,26 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
     function _getPoolFactor() internal view returns (uint256, uint256) {
         // TODO 依据池子LP质押量动态变动
-        _totalStakeLP;
-        return (150, 100);
+
+        uint256 _numerator;
+
+        if (totalStakingLP < 1000 * 1e18) {
+            _numerator = 100;
+        } else if (totalStakingLP < 10000 * 1e18) {
+            _numerator = 120;
+        } else if (totalStakingLP < 50000 * 1e18) {
+            _numerator = 150;
+        } else if (totalStakingLP < 100000 * 1e18) {
+            _numerator = 180;
+        } else if (totalStakingLP < 500000 * 1e18) {
+            _numerator = 200;
+        } else if (totalStakingLP < 1000000 * 1e18) {
+            _numerator = 220;
+        } else {
+            _numerator = 250;
+        }
+
+        return (_numerator, 100);
     }
 
     function _updateInvitersRewardAdd(
@@ -596,5 +665,17 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
     ) internal view returns (uint256) {
         return
             _getInviteTotalBenefit(_account) + _getStakeTotalBenefit(_account);
+    }
+
+    function _updateWithdrawLPAmount(uint256 _amount) internal {
+        if (block.timestamp < lastestUpdateTime + oneCycle_Days) {
+            StakingVolumeInOneCycle += _amount;
+        } else {
+            lastestUpdateTime = uint128(block.timestamp);
+
+            currentWithdrawLPAmount += StakingVolumeInOneCycle / 2;
+
+            StakingVolumeInOneCycle = _amount;
+        }
     }
 }
