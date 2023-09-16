@@ -191,6 +191,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
             _invitee,
             _numberLayers
         );
+
         return (_inviters, _nubmer);
     }
 
@@ -198,11 +199,17 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         uint256 _amount
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
+
         uint256 _total = _getTotalBenefit(_account);
+
         uint256 _remain = _total - amountWithdrawed[_account];
+
         require(_amount <= _remain, "Insufficient for withdrawal");
+
         amountWithdrawed[_account] += _amount;
+
         IERC20(YGIO).transfer(_account, _amount);
+
         return true;
     }
 
@@ -210,7 +217,9 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
         uint256 _amount
     ) external whenNotPaused nonReentrant {
         address _account = _msgSender();
+
         require(_account == mineOwner, "Must mineOwner");
+
         require(_amount <= balancePoolOwner, "Withdrawal restrictions");
         // TODO 每日有限额
     }

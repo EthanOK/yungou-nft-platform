@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract YGIO_B is Pausable, Ownable, ERC20 {
     uint256 public constant BASE_10000 = 10_000;
 
     address private slippageAccount;
+
     // Base 10000
     mapping(address => uint256) private isTransactionPools;
 
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;
+
         mint(_msgSender(), 10_000_000_000 * 10e18);
     }
 
