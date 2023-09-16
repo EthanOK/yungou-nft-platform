@@ -52,6 +52,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     // Total YGIO amount in Staking
     uint256 public ygioStakingTotal;
 
+    uint256 private minStakeAmount = 200 * 1e18;
+
     constructor() {
         stakingPeriods = [
             30 * ONE_CYCLE,
@@ -103,7 +105,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256 _amount,
         uint256 _stakeDays
     ) external whenNotPaused nonReentrant {
-        require(_amount > 0, "Invalid _amount");
+        require(_amount >= minStakeAmount, "Invalid _amount");
 
         uint256 _stakeTime = _stakeDays * ONE_CYCLE;
 
