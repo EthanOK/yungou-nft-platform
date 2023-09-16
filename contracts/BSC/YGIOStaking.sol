@@ -98,7 +98,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         }
     }
 
-    //_level: 1 ~ 4
+    //_stakeDays: 30 90 180 360
     function stakingYGIO(
         uint256 _amount,
         uint256 _stakeDays
