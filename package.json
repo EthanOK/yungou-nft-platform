@@ -7,6 +7,7 @@
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
     "test": "npx hardhat test",
+    "testYGIOStake": "npx hardhat test test/YGIOStakingTest.js",
     "node": "npx hardhat node",
     "deploy": "npx hardhat run scripts/deploy.js --network localhost",
     "verify_networks": "npx hardhat verify --list-networks"

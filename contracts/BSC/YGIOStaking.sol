@@ -31,9 +31,11 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256 indexed blockNumber
     );
     // constant:
-    address public constant YGIO = 0xb06DcE9ae21c3b9163cD933E40c9EE563366b783;
 
     uint64 public constant ONE_CYCLE = 1 days;
+
+    // immutable
+    IERC20 public immutable YGIO;
 
     // variable:
     uint64[4] private stakingPeriods;
@@ -54,7 +56,9 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
 
     uint256 private minStakeAmount = 200 * 1e18;
 
-    constructor() {
+    constructor(address _ygio) {
+        YGIO = IERC20(_ygio);
+
         stakingPeriods = [
             30 * ONE_CYCLE,
             90 * ONE_CYCLE,
@@ -104,7 +108,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     function stakingYGIO(
         uint256 _amount,
         uint256 _stakeDays
-    ) external whenNotPaused nonReentrant {
+    ) external whenNotPaused nonReentrant returns (bool) {
         require(_amount >= minStakeAmount, "Invalid _amount");
 
         uint256 _stakeTime = _stakeDays * ONE_CYCLE;
@@ -162,6 +166,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         unchecked {
             ygioStakingTotal += _amount;
         }
+
+        return true;
     }
 
     function unStakeYGIO(

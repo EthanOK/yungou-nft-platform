@@ -8,17 +8,21 @@ describe("YgmeStaking", function () {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount, signer] = await ethers.getSigners();
 
-    const YGIO = await ethers.getContractFactory("YGIO");
+    const YGIO = await ethers.getContractFactory(
+      "contracts/YunGouPlatformCoin/YGIO.sol:YGIO"
+    );
     const ygio = await YGIO.deploy([
       signer.address,
       signer.address,
       owner.address,
-      otherAccount.address,
+      signer.address,
       signer.address,
     ]);
     await ygio.deployed();
 
-    const YGME = await ethers.getContractFactory("YGME");
+    const YGME = await ethers.getContractFactory(
+      "contracts/YunGouPlatformCoin/YGME.sol:YGME"
+    );
     const ygme = await YGME.deploy(signer.address, signer.address);
     await ygme.deployed();
 
