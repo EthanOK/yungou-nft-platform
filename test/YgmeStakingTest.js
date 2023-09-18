@@ -40,7 +40,8 @@ describe("YgmeStaking", function () {
 
     let amount = await ygio.balanceOf(owner.address);
 
-    await ygio.transfer(ygmes.address, amount);
+    let tx = await ygio.transfer(ygmes.address, amount);
+    await tx.wait();
 
     return { ygio, ygme, ygmes, owner, otherAccount, signer };
   }
@@ -77,7 +78,9 @@ describe("YgmeStaking", function () {
           (await ygio.balanceOf(otherAccount.address))
       );
 
-      await ygmes.withdrawERC20(encodedData, signature);
+      let tx = await ygmes.withdrawERC20(encodedData, signature);
+      await tx.wait();
+      
       console.log("withdrawERC20:");
       console.log(
         "balanceOf(otherAccount):" +

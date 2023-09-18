@@ -15,7 +15,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;
 
-        mint(_msgSender(), 10_000_000_000 * 10e18);
+        mint(_msgSender(), 10_000 * 1e18);
     }
 
     function setPause() external onlyOwner {

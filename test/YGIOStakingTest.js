@@ -17,6 +17,11 @@ describe("YGIOStaking", function () {
     const ygioStaking = await YGIOStaking.deploy(ygio.address);
     await ygioStaking.deployed();
 
+    const balance = await ygio.balanceOf(owner.address);
+
+    let tx = await ygio.approve(ygioStaking.address, balance.div(2));
+    await tx.wait();
+
     return { ygio, owner, ygioStaking };
   }
 
@@ -42,18 +47,66 @@ describe("YGIOStaking", function () {
       );
 
       let amount = utils.parseEther("200");
-      ygio.connect(owner);
 
-      await ygio.approve(ygioStaking.address, amount);
+      let txStaking = await ygioStaking.stakingYGIO(amount, 30);
 
-      ygioStaking.connect(owner);
-
-      await ygioStaking.stakingYGIO(amount, 30);
+      await txStaking.wait();
 
       let orders = await ygioStaking.getStakingOrderIds(owner.address);
-      console.log(orders);
+      expect(orders.length).to.equal(1);
+
+      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
+        true
+      );
     });
 
-    // it("signature is true", async function () {});
+    it("Invalid _amount", async function () {
+      const { ygio, owner, ygioStaking } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount0 = utils.parseEther("100");
+
+      await expect(
+        ygioStaking.callStatic.stakingYGIO(amount0, 30)
+      ).to.be.revertedWith("Invalid _amount");
+    });
+
+    it("Invalid stake time", async function () {
+      const { ygio, owner, ygioStaking } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount1 = utils.parseEther("200");
+
+      await expect(
+        ygioStaking.callStatic.stakingYGIO(amount1, 40)
+      ).to.be.revertedWith("Invalid stake time");
+    });
+
+    it("Insufficient balance", async function () {
+      const { ygio, owner, ygioStaking } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount1 = utils.parseEther("11000");
+
+      await expect(
+        ygioStaking.callStatic.stakingYGIO(amount1, 30)
+      ).to.be.revertedWith("Insufficient balance");
+    });
+
+    it("Insufficient balance", async function () {
+      const { ygio, owner, ygioStaking } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount1 = utils.parseEther("6000");
+
+      await expect(
+        ygioStaking.callStatic.stakingYGIO(amount1, 30)
+      ).to.be.revertedWith("ERC20: insufficient allowance");
+    });
+    //
   });
 });
