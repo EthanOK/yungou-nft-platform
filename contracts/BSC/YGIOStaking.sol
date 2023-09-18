@@ -30,9 +30,8 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         StakeType indexed stakeType,
         uint256 indexed blockNumber
     );
-    // constant:
-
-    uint64 public constant ONE_CYCLE = 1 days;
+    // constant: 1 days
+    uint64 public constant ONE_CYCLE = 1;
 
     // immutable
     IERC20 public immutable YGIO;
@@ -172,7 +171,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
 
     function unStakeYGIO(
         uint256[] calldata _stakingOrderIds
-    ) external whenNotPaused nonReentrant {
+    ) external whenNotPaused nonReentrant returns (bool) {
         uint256 _length = _stakingOrderIds.length;
         require(_length > 0, "Invalid stakeOrderIds");
         address _account = _msgSender();
@@ -224,6 +223,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         }
 
         ygioStakingTotal -= _sumAmount;
+        return true;
     }
 
     function unStakeYGIOOnlyOwner(
