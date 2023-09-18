@@ -66,6 +66,23 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         return true;
     }
 
+    function batchTransfer(
+        address[] calldata tos,
+        uint256[] calldata amounts
+    ) external returns (bool) {
+        require(tos.length == amounts.length, "Invalid Paras");
+
+        address owner = _msgSender();
+
+        uint256 count = tos.length;
+
+        for (uint i = 0; i < count; ++i) {
+            _transfer(owner, tos[i], amounts[i]);
+        }
+
+        return true;
+    }
+
     function transferFrom(
         address from,
         address to,
