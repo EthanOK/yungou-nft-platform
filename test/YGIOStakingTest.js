@@ -2,7 +2,7 @@ const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { BigNumber, utils } = require("ethers");
 const { expect } = require("chai");
 
-const stakeCycle = 3;
+const stakeCycle = 9;
 describe("YGIOStaking", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -28,7 +28,7 @@ describe("YGIOStaking", function () {
   }
 
   describe("Function: stakingYGIO", function () {
-    it("stakingYGIO should success", async function () {
+    it("stakingYGIO should Success", async function () {
       const { ygio, owner, ygioStaking } = await loadFixture(
         deployOneYearLockFixture
       );
@@ -109,7 +109,7 @@ describe("YGIOStaking", function () {
   });
 
   describe("Function: unStakeYGIO", function () {
-    it("stakingYGIO should success", async function () {
+    it("stakingYGIO should Success", async function () {
       const { otherAccount, owner, ygioStaking } = await loadFixture(
         deployOneYearLockFixture
       );
@@ -148,7 +148,7 @@ describe("YGIOStaking", function () {
       );
 
       let amount = utils.parseEther("200");
-      let stakeCycle = 3;
+
       expect(
         await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
       ).to.equal(true);
@@ -164,6 +164,7 @@ describe("YGIOStaking", function () {
         ygioStaking.callStatic.unStakeYGIO(orders)
       ).to.be.revertedWith("Not yet time to unStake");
     });
+
     it("Invalid account", async function () {
       // 1: stakingYGIO
       const { otherAccount, owner, ygioStaking } = await loadFixture(
@@ -191,11 +192,66 @@ describe("YGIOStaking", function () {
     });
   });
 
-  /*   describe("Function: unStakeYGIO", function () {
-    it("stakingYGIO should success", async function () {
-      //
+  describe("Function: unStakeYGIOOnlyOwner", function () {
+    it("unStakeYGIOOnlyOwner should Success", async function () {
+      const { otherAccount, owner, ygioStaking, ygio } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount = utils.parseEther("200");
+
+      console.log(
+        "stakingYGIO Before:",
+        (await ygio.balanceOf(owner.address)).toString()
+      );
+
+      expect(
+        await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
+      ).to.equal(true);
+
+      let txStaking = await ygioStaking.stakingYGIO(amount, stakeCycle);
+
+      await txStaking.wait();
+
+      let orders = await ygioStaking.getStakingOrderIds(owner.address);
+      expect(orders.length).to.equal(1);
+      console.log(
+        "stakingYGIO After:",
+        (await ygio.balanceOf(owner.address)).toString()
+      );
+
+      let txunStakeOwner = await ygioStaking.unStakeYGIOOnlyOwner(orders);
+      await txunStakeOwner.wait();
+      console.log(
+        "unStakeYGIOOnlyOwner After:",
+        (await ygio.balanceOf(owner.address)).toString()
+      );
     });
-  }); */
+
+    it("Ownable: caller is not the owner", async function () {
+      const { otherAccount, owner, ygioStaking, ygio } = await loadFixture(
+        deployOneYearLockFixture
+      );
+
+      let amount = utils.parseEther("200");
+
+      expect(
+        await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
+      ).to.equal(true);
+
+      let txStaking = await ygioStaking.stakingYGIO(amount, stakeCycle);
+
+      await txStaking.wait();
+
+      let orders = await ygioStaking.getStakingOrderIds(owner.address);
+      expect(orders.length).to.equal(1);
+
+      let ygioStakingA = ygioStaking.connect(otherAccount);
+      await expect(
+        ygioStakingA.callStatic.unStakeYGIOOnlyOwner(orders)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
 });
 
 function delay(s) {
