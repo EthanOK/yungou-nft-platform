@@ -48,6 +48,10 @@ describe("YGIOStaking", function () {
 
       let amount = utils.parseEther("200");
 
+      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
+        true
+      );
+
       let txStaking = await ygioStaking.stakingYGIO(amount, 30);
 
       await txStaking.wait();
@@ -55,8 +59,15 @@ describe("YGIOStaking", function () {
       let orders = await ygioStaking.getStakingOrderIds(owner.address);
       expect(orders.length).to.equal(1);
 
-      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
-        true
+      let stakingData = await ygioStaking.getStakingData(orders[0]);
+
+      expect(stakingData.owner).to.equal(owner.address);
+      expect(stakingData.amount).to.equal(amount);
+
+      const ONE_CYCLE = await ygioStaking.ONE_CYCLE();
+
+      expect(stakingData.endTime.sub(stakingData.startTime)).to.equal(
+        BigNumber.from("30").mul(ONE_CYCLE)
       );
     });
 
