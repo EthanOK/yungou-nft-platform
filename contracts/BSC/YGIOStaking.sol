@@ -59,10 +59,10 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         YGIO = IERC20(_ygio);
 
         stakingPeriods = [
-            30 * ONE_CYCLE,
-            90 * ONE_CYCLE,
-            180 * ONE_CYCLE,
-            360 * ONE_CYCLE
+            3 * ONE_CYCLE,
+            9 * ONE_CYCLE,
+            18 * ONE_CYCLE,
+            36 * ONE_CYCLE
         ];
     }
 
@@ -223,6 +223,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         }
 
         ygioStakingTotal -= _sumAmount;
+
         return true;
     }
 

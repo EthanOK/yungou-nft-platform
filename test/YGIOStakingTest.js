@@ -1,6 +1,8 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { BigNumber, utils } = require("ethers");
 const { expect } = require("chai");
+
+const stakeCycle = 3;
 describe("YGIOStaking", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -33,11 +35,11 @@ describe("YGIOStaking", function () {
 
       let amount = utils.parseEther("200");
 
-      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
-        true
-      );
+      expect(
+        await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
+      ).to.equal(true);
 
-      let txStaking = await ygioStaking.stakingYGIO(amount, 30);
+      let txStaking = await ygioStaking.stakingYGIO(amount, stakeCycle);
 
       await txStaking.wait();
 
@@ -52,7 +54,7 @@ describe("YGIOStaking", function () {
       const ONE_CYCLE = await ygioStaking.ONE_CYCLE();
 
       expect(stakingData.endTime.sub(stakingData.startTime)).to.equal(
-        BigNumber.from("30").mul(ONE_CYCLE)
+        BigNumber.from(stakeCycle.toString()).mul(ONE_CYCLE)
       );
     });
 
@@ -64,7 +66,7 @@ describe("YGIOStaking", function () {
       let amount0 = utils.parseEther("100");
 
       await expect(
-        ygioStaking.callStatic.stakingYGIO(amount0, 30)
+        ygioStaking.callStatic.stakingYGIO(amount0, stakeCycle)
       ).to.be.revertedWith("Invalid _amount");
     });
 
@@ -76,7 +78,7 @@ describe("YGIOStaking", function () {
       let amount1 = utils.parseEther("200");
 
       await expect(
-        ygioStaking.callStatic.stakingYGIO(amount1, 40)
+        ygioStaking.callStatic.stakingYGIO(amount1, stakeCycle + 1)
       ).to.be.revertedWith("Invalid stake time");
     });
 
@@ -88,7 +90,7 @@ describe("YGIOStaking", function () {
       let amount1 = utils.parseEther("11000");
 
       await expect(
-        ygioStaking.callStatic.stakingYGIO(amount1, 30)
+        ygioStaking.callStatic.stakingYGIO(amount1, stakeCycle)
       ).to.be.revertedWith("Insufficient balance");
     });
 
@@ -100,7 +102,7 @@ describe("YGIOStaking", function () {
       let amount1 = utils.parseEther("6000");
 
       await expect(
-        ygioStaking.callStatic.stakingYGIO(amount1, 30)
+        ygioStaking.callStatic.stakingYGIO(amount1, stakeCycle)
       ).to.be.revertedWith("ERC20: insufficient allowance");
     });
     //
@@ -113,7 +115,6 @@ describe("YGIOStaking", function () {
       );
 
       let amount = utils.parseEther("200");
-      let stakeCycle = 30;
 
       expect(
         await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
@@ -127,8 +128,8 @@ describe("YGIOStaking", function () {
       expect(orders.length).to.equal(1);
       // unStakeYGIO
 
-      // TODO:等 30 * ONE_CYCLE0 再执行
-      await delay(stakeCycle * 1000);
+      // TODO:等 stakeCycle * ONE_CYCLE 再执行
+      await delay(stakeCycle + 2);
 
       // 预执行 unStakeYGIO 不改变链的状态
       expect(await ygioStaking.callStatic.unStakeYGIO(orders)).to.equal(true);
@@ -147,12 +148,12 @@ describe("YGIOStaking", function () {
       );
 
       let amount = utils.parseEther("200");
+      let stakeCycle = 3;
+      expect(
+        await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
+      ).to.equal(true);
 
-      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
-        true
-      );
-
-      let txStaking = await ygioStaking.stakingYGIO(amount, 30);
+      let txStaking = await ygioStaking.stakingYGIO(amount, stakeCycle);
 
       await txStaking.wait();
 
@@ -171,11 +172,11 @@ describe("YGIOStaking", function () {
 
       let amount = utils.parseEther("200");
 
-      expect(await ygioStaking.callStatic.stakingYGIO(amount, 30)).to.equal(
-        true
-      );
+      expect(
+        await ygioStaking.callStatic.stakingYGIO(amount, stakeCycle)
+      ).to.equal(true);
 
-      let txStaking = await ygioStaking.stakingYGIO(amount, 30);
+      let txStaking = await ygioStaking.stakingYGIO(amount, stakeCycle);
 
       await txStaking.wait();
 
@@ -197,6 +198,6 @@ describe("YGIOStaking", function () {
   }); */
 });
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function delay(s) {
+  return new Promise((resolve) => setTimeout(resolve, s * 1000));
 }
