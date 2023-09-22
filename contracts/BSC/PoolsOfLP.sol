@@ -139,7 +139,7 @@ contract PoolsOfLP is Pausable, AccessControl, ReentrancyGuard {
 
         poolName = _poolName;
 
-        amountMineOwner = _amount * 10e18;
+        amountMineOwner = _amount * 1e18;
 
         inviteeSigner = _inviteeSigner;
 
