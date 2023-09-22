@@ -32,6 +32,7 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
     );
     // constant: 1 days
     uint64 public constant ONE_CYCLE = 1;
+    uint256 public constant FACTOR_BASE = 10_000;
 
     // immutable
     IERC20 public immutable YGIO;
@@ -98,8 +99,10 @@ contract YGIOStaking is Pausable, Ownable, ReentrancyGuard {
         uint256 weight = _caculateStakingWeight(_account);
 
         unchecked {
-            numerator = weight + ygioStakingTotal;
-            denominator = ygioStakingTotal;
+            numerator =
+                ((weight + ygioStakingTotal) * FACTOR_BASE) /
+                ygioStakingTotal;
+            denominator = FACTOR_BASE;
         }
     }
 
