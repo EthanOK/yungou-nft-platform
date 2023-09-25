@@ -76,6 +76,7 @@ contract PoolsOfLP is
     address public immutable YGIO;
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
+    uint256 public constant ONEDAY = 1 days;
 
     string private poolName;
 
@@ -119,6 +120,10 @@ contract PoolsOfLP is
 
     // lastest Update Time Of Withdraw LP Amount
     uint128 private lastestUpdateTime;
+
+    // one week Stake Increment Amounts
+    // weekStakeIncrementVolumes[0] : cureent Staking Volume In days
+    uint256[8] private weekStakeIncrementVolumes;
 
     // invitee =>  inviter
     mapping(address => address) private inviters;
@@ -213,6 +218,14 @@ contract PoolsOfLP is
         return _getStakeTotalBenefit(_account);
     }
 
+    function getStakeIncrementVolumesInweek()
+        external
+        view
+        returns (uint256[8] memory)
+    {
+        return weekStakeIncrementVolumes;
+    }
+
     function getStakeLPData(
         address _account
     ) external view returns (StakeLPData memory) {
@@ -231,51 +244,16 @@ contract PoolsOfLP is
         return (_inviters, _nubmer);
     }
 
-    function withdrawYGIO(
-        uint256 _amount
-    ) external whenNotPaused nonReentrant returns (bool) {
-        address _account = _msgSender();
-
-        uint256 _total = _getTotalBenefit(_account);
-
-        uint256 _remain = _total - amountWithdrawed[_account];
-
-        require(_amount <= _remain, "Insufficient for withdrawal");
-
-        amountWithdrawed[_account] += _amount;
-
-        IERC20(YGIO).transfer(_account, _amount);
-
-        return true;
-    }
-
-    function withdrawLPOnlyMineOwner(
-        uint256 _amount
-    ) external whenNotPaused nonReentrant returns (bool) {
-        address _account = _msgSender();
-
-        require(_account == mineOwner, "Must mineOwner");
-
-        require(_amount <= currentWithdrawLPAmount, "Withdrawal restrictions");
-
-        require(_amount <= balancePoolOwner, "Insufficient balancePoolOwner");
-
-        currentWithdrawLPAmount -= _amount;
-
-        balancePoolOwner -= _amount;
-
-        // transfer LP
-        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amount);
-
-        return true;
-    }
-
     function getCurrentWithdrawLPAmountOfMineOwner()
-        internal
+        external
         view
         returns (uint256)
     {
         return currentWithdrawLPAmount;
+    }
+
+    function getLastestUpdateTime() external view returns (uint256) {
+        return lastestUpdateTime;
     }
 
     function becomeMineOwner(
@@ -296,7 +274,7 @@ contract PoolsOfLP is
 
         balancePoolOwner = amountMineOwner;
 
-        lastestUpdateTime = uint128(block.timestamp);
+        lastestUpdateTime = _currentTimeStampRound();
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
@@ -394,10 +372,63 @@ contract PoolsOfLP is
         // update Inviters Reward
         _updateInvitersRewardRemove(_account, _amountLP);
 
+        _updateWithdrawLPAmount(0);
+
         totalStakingLP -= _amountLP;
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountLP);
+    }
+
+    function withdrawYGIO(
+        uint256 _amount
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
+
+        uint256 _total = _getTotalBenefit(_account);
+
+        uint256 _remain = _total - amountWithdrawed[_account];
+
+        require(_amount <= _remain, "Insufficient for withdrawal");
+
+        amountWithdrawed[_account] += _amount;
+
+        IERC20(YGIO).transfer(_account, _amount);
+
+        return true;
+    }
+
+    function withdrawLPOnlyMineOwner(
+        uint256 _amount
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
+
+        require(_account == mineOwner, "Must mineOwner");
+
+        require(_amount <= currentWithdrawLPAmount, "Withdrawal restrictions");
+
+        require(_amount <= balancePoolOwner, "Insufficient balancePoolOwner");
+
+        currentWithdrawLPAmount -= _amount;
+
+        balancePoolOwner -= _amount;
+
+        _updateWithdrawLPAmount(0);
+
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amount);
+
+        return true;
+    }
+
+    function updateIncrementEveryDay()
+        external
+        whenNotPaused
+        nonReentrant
+        returns (bool)
+    {
+        _updateWithdrawLPAmount(0);
+        return true;
     }
 
     // Return YGIO Reward(MUL Factor)
@@ -685,14 +716,30 @@ contract PoolsOfLP is
     }
 
     function _updateWithdrawLPAmount(uint256 _amount) internal {
-        if (block.timestamp < lastestUpdateTime + oneCycle_Days) {
-            StakingVolumeInOneCycle += _amount;
+        if (block.timestamp < lastestUpdateTime + ONEDAY) {
+            weekStakeIncrementVolumes[0] += _amount;
         } else {
-            lastestUpdateTime = uint128(block.timestamp);
+            currentWithdrawLPAmount += weekStakeIncrementVolumes[0] / 2;
 
-            currentWithdrawLPAmount += StakingVolumeInOneCycle / 2;
+            uint256 day_ = (block.timestamp - lastestUpdateTime) / ONEDAY;
 
-            StakingVolumeInOneCycle = _amount;
+            for (uint256 i = 0; i <= 7 - day_; ++i) {
+                weekStakeIncrementVolumes[7 - i] = weekStakeIncrementVolumes[
+                    7 - day_ - i
+                ];
+            }
+
+            for (uint256 j = 1; j < day_; ++j) {
+                delete weekStakeIncrementVolumes[j];
+            }
+
+            lastestUpdateTime = _currentTimeStampRound();
+
+            weekStakeIncrementVolumes[0] = _amount;
         }
+    }
+
+    function _currentTimeStampRound() internal view returns (uint128) {
+        return uint128(((block.timestamp) / ONEDAY) * ONEDAY);
     }
 }
