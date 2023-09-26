@@ -113,7 +113,7 @@ contract PoolsOfLP is
     uint256 private currentWithdrawLPAmount;
 
     // in one Cycle StakingVolume total StakingVolume
-    uint256 private StakingVolumeInOneCycle;
+    // uint256 private StakingVolumeInOneCycle;
 
     // oneCycle Of Update Withdraw LP Amount
     uint128 private oneCycle_Days = 1 days;
@@ -310,9 +310,11 @@ contract PoolsOfLP is
                 uint64(block.number)
             );
 
-            _stakelPData.accruedIncomeYGIO += rewardYGIO;
+            unchecked {
+                _stakelPData.accruedIncomeYGIO += rewardYGIO;
 
-            _stakelPData.amountLP += _amountLP;
+                _stakelPData.amountLP += _amountLP;
+            }
 
             uint256 _amountLPWorking = _getAmountLPWorking(
                 _account,
@@ -359,7 +361,10 @@ contract PoolsOfLP is
             _stakeLPData.startBlockNumber,
             uint64(block.number)
         );
-        _stakeLPData.accruedIncomeYGIO += _currentStakingReward;
+
+        unchecked {
+            _stakeLPData.accruedIncomeYGIO += _currentStakingReward;
+        }
 
         uint256 _amountLP = _stakeLPData.amountLP;
 
@@ -383,17 +388,42 @@ contract PoolsOfLP is
     function withdrawYGIO(
         uint256 _amount
     ) external whenNotPaused nonReentrant returns (bool) {
-        address _account = _msgSender();
+        unchecked {
+            address _account = _msgSender();
 
-        uint256 _total = _getTotalBenefit(_account);
+            StakeLPData storage _stakelPData = stakeLPDatas[_account];
 
-        uint256 _remain = _total - amountWithdrawed[_account];
+            if (_stakelPData.amountLPWorking > 0) {
+                // update YGIO Reward In staking
+                uint256 rewardYGIO = _caculateLPWorkingReward(
+                    _account,
+                    _stakelPData.amountLPWorking,
+                    _stakelPData.startBlockNumber,
+                    uint64(block.number)
+                );
 
-        require(_amount <= _remain, "Insufficient for withdrawal");
+                _stakelPData.accruedIncomeYGIO += rewardYGIO;
 
-        amountWithdrawed[_account] += _amount;
+                _stakelPData.startBlockNumber = uint64(block.number);
+            }
 
-        IERC20(YGIO).transfer(_account, _amount);
+            uint256 _total = _getTotalBenefit(_account);
+
+            uint256 _amountWithdrawed = amountWithdrawed[_account];
+
+            require(
+                _amountWithdrawed <= _total,
+                "Insufficient amountWithdrawed"
+            );
+
+            uint256 _remain = _total - _amountWithdrawed;
+
+            require(_amount <= _remain, "Insufficient for withdrawal");
+
+            amountWithdrawed[_account] += _amount;
+
+            IERC20(YGIO).transfer(_account, _amount);
+        }
 
         return true;
     }
@@ -439,8 +469,13 @@ contract PoolsOfLP is
         uint64 _endBlockNumber
     ) internal view returns (uint256) {
         // working Cycle Number
-        uint256 cycleNumber = (_endBlockNumber - _startBlockNumber) /
-            oneCycle_BlockNumber;
+        uint256 cycleNumber;
+
+        unchecked {
+            cycleNumber =
+                (_endBlockNumber - _startBlockNumber) /
+                oneCycle_BlockNumber;
+        }
 
         if (cycleNumber == 0) {
             return 0;
@@ -543,25 +578,29 @@ contract PoolsOfLP is
         ) = _queryMineOwnerAndInviters(_invitee, rewardLevelMax);
 
         for (uint i = 0; i < _number; ++i) {
-            InviterLPData storage _inviterLPData = inviterLPDatas[
-                _mineOwnerAndInviters[i]
-            ];
-            uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
-                REWARDRATE_BASE;
-            if (_inviterLPData.startBlockNumber == uint64(block.number)) {
-                _inviterLPData.amountLPWorking += _rewardLPWorking;
-            } else {
-                // caculate inviter reward YGIO
-                uint256 _inviterRewardYGIO = _caculateInviterRewardYGIO(
-                    _inviterLPData.amountLPWorking,
-                    _inviterLPData.startBlockNumber
-                );
+            unchecked {
+                InviterLPData storage _inviterLPData = inviterLPDatas[
+                    _mineOwnerAndInviters[i]
+                ];
 
-                _inviterLPData.accruedIncomeYGIO += _inviterRewardYGIO;
+                uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
+                    REWARDRATE_BASE;
 
-                _inviterLPData.amountLPWorking += _rewardLPWorking;
+                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                    _inviterLPData.amountLPWorking += _rewardLPWorking;
+                } else {
+                    // caculate inviter reward YGIO
+                    uint256 _inviterRewardYGIO = _caculateInviterRewardYGIO(
+                        _inviterLPData.amountLPWorking,
+                        _inviterLPData.startBlockNumber
+                    );
 
-                _inviterLPData.startBlockNumber = uint64(block.number);
+                    _inviterLPData.accruedIncomeYGIO += _inviterRewardYGIO;
+
+                    _inviterLPData.amountLPWorking += _rewardLPWorking;
+
+                    _inviterLPData.startBlockNumber = uint64(block.number);
+                }
             }
         }
     }
@@ -673,14 +712,18 @@ contract PoolsOfLP is
 
         uint256 _number = 1;
 
-        for (uint i = 0; i < _numberLayers; ++i) {
+        for (uint i = 0; i < _numberLayers; ) {
             _invitee = inviters[_invitee];
 
             if (_invitee == ZERO_ADDRESS) break;
 
             _inviters[i + 1] = _invitee;
 
-            _number += 1;
+            unchecked {
+                _number += 1;
+
+                ++i;
+            }
         }
 
         return (_inviters, _number);
@@ -695,14 +738,18 @@ contract PoolsOfLP is
         // The number of superiors of the invitee
         uint256 _number;
 
-        for (uint i = 0; i < _numberLayers; ++i) {
+        for (uint i = 0; i < _numberLayers; ) {
             _invitee = inviters[_invitee];
 
             if (_invitee == ZERO_ADDRESS) break;
 
             _inviters[i] = _invitee;
 
-            _number = i + 1;
+            unchecked {
+                _number += 1;
+
+                ++i;
+            }
         }
 
         return (_inviters, _number);
@@ -716,30 +763,40 @@ contract PoolsOfLP is
     }
 
     function _updateWithdrawLPAmount(uint256 _amount) internal {
-        if (block.timestamp < lastestUpdateTime + ONEDAY) {
-            weekStakeIncrementVolumes[0] += _amount;
-        } else {
-            currentWithdrawLPAmount += weekStakeIncrementVolumes[0] / 2;
+        unchecked {
+            if (block.timestamp < lastestUpdateTime + ONEDAY) {
+                weekStakeIncrementVolumes[0] += _amount;
+            } else {
+                currentWithdrawLPAmount += weekStakeIncrementVolumes[0] / 2;
 
-            uint256 day_ = (block.timestamp - lastestUpdateTime) / ONEDAY;
+                uint256 day_ = (block.timestamp - lastestUpdateTime) / ONEDAY;
 
-            for (uint256 i = 0; i <= 7 - day_; ++i) {
-                weekStakeIncrementVolumes[7 - i] = weekStakeIncrementVolumes[
-                    7 - day_ - i
-                ];
+                day_ = day_ > 7 ? 7 : day_;
+
+                for (uint256 i = 0; i <= 7 - day_; ++i) {
+                    weekStakeIncrementVolumes[
+                        7 - i
+                    ] = weekStakeIncrementVolumes[7 - day_ - i];
+                }
+
+                for (uint256 j = 1; j < day_; ++j) {
+                    delete weekStakeIncrementVolumes[j];
+                }
+
+                lastestUpdateTime = _currentTimeStampRound();
+
+                weekStakeIncrementVolumes[0] = _amount;
             }
-
-            for (uint256 j = 1; j < day_; ++j) {
-                delete weekStakeIncrementVolumes[j];
-            }
-
-            lastestUpdateTime = _currentTimeStampRound();
-
-            weekStakeIncrementVolumes[0] = _amount;
         }
     }
 
-    function _currentTimeStampRound() internal view returns (uint128) {
-        return uint128(((block.timestamp) / ONEDAY) * ONEDAY);
+    function _currentTimeStampRound()
+        internal
+        view
+        returns (uint128 _cTimeStamp)
+    {
+        unchecked {
+            _cTimeStamp = uint128(((block.timestamp) / ONEDAY) * ONEDAY);
+        }
     }
 }
