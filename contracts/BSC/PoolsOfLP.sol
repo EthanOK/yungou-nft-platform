@@ -30,33 +30,33 @@ interface IYGIOStake {
 
 abstract contract PoolsOfLPDomain {
     enum StakeState {
+        NULL,
         STAKING,
         UNSTAKE,
         CONTINUESTAKE
     }
 
     struct StakeLPData {
-        StakeState state;
         uint256 amountLP;
         uint256 amountLPWorking;
         // Accumulated income after staking settlement (stake again, or cancel staking)
         uint256 accruedIncomeYGIO;
-        uint64 startBlockNumber;
-        uint64 endBlockNumber;
+        uint128 startBlockNumber;
+        uint128 endBlockNumber;
     }
 
     struct InviterLPData {
         uint256 amountLPWorking;
         uint256 accruedIncomeYGIO;
-        uint64 startBlockNumber;
+        uint256 startBlockNumber;
     }
 
     event StakeLP(
-        uint256 orderId,
         address indexed account,
         uint256 amount,
-        uint256 startTime,
-        uint256 endTime,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 countStakeLP,
         StakeState state
     );
 }
@@ -71,12 +71,13 @@ contract PoolsOfLP is
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    address public immutable LPTOKEN_YGIO_USDT;
-    address public immutable YGIO_STAKE;
-    address public immutable YGIO;
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
     uint256 public constant ONEDAY = 1 days;
+
+    address public immutable LPTOKEN_YGIO_USDT;
+    address public immutable YGIO_STAKE;
+    address public immutable YGIO;
 
     string private poolName;
 
@@ -95,7 +96,7 @@ contract PoolsOfLP is
     uint8 public rewardLevelMax;
 
     // Mine Owner reward rate
-    uint32 private poolOwnerRate;
+    // uint32 private poolOwnerRate;
 
     // reward Rates
     uint32[8] private rewardRates;
@@ -124,6 +125,8 @@ contract PoolsOfLP is
     // one week Stake Increment Amounts
     // weekStakeIncrementVolumes[0] : cureent Staking Volume In days
     uint256[8] private weekStakeIncrementVolumes;
+
+    uint256 private countStakeLP;
 
     // invitee =>  inviter
     mapping(address => address) private inviters;
@@ -302,18 +305,20 @@ contract PoolsOfLP is
 
         // The user has lp working
         if (_stakelPData.amountLPWorking > 0) {
-            // caculate LP Working Reward
-            uint256 rewardYGIO = _caculateLPWorkingReward(
-                _account,
-                _stakelPData.amountLPWorking,
-                _stakelPData.startBlockNumber,
-                uint64(block.number)
-            );
+            {
+                // caculate LP Working Reward
+                uint256 rewardYGIO = _caculateLPWorkingReward(
+                    _account,
+                    _stakelPData.amountLPWorking,
+                    _stakelPData.startBlockNumber,
+                    uint128(block.number)
+                );
 
-            unchecked {
-                _stakelPData.accruedIncomeYGIO += rewardYGIO;
+                unchecked {
+                    _stakelPData.accruedIncomeYGIO += rewardYGIO;
 
-                _stakelPData.amountLP += _amountLP;
+                    _stakelPData.amountLP += _amountLP;
+                }
             }
 
             uint256 _amountLPWorking = _getAmountLPWorking(
@@ -323,7 +328,7 @@ contract PoolsOfLP is
 
             _stakelPData.amountLPWorking = _amountLPWorking;
 
-            _stakelPData.startBlockNumber = uint64(block.number);
+            _stakelPData.startBlockNumber = uint128(block.number);
         } else {
             _stakelPData.amountLP = _amountLP;
 
@@ -332,10 +337,13 @@ contract PoolsOfLP is
                 _amountLP
             );
 
-            _stakelPData.startBlockNumber = uint64(block.number);
+            _stakelPData.startBlockNumber = uint128(block.number);
         }
 
-        totalStakingLP += _amountLP;
+        unchecked {
+            totalStakingLP += _amountLP;
+            ++countStakeLP;
+        }
 
         // update Inviters Reward
         _updateInvitersRewardAdd(_account, _amountLP);
@@ -348,9 +356,86 @@ contract PoolsOfLP is
             address(this),
             _amountLP
         );
+
+        emit StakeLP(
+            _account,
+            _amountLP,
+            _stakelPData.startBlockNumber,
+            _stakelPData.endBlockNumber,
+            countStakeLP,
+            StakeState.STAKING
+        );
     }
 
-    function unStakeLP() external whenNotPaused nonReentrant {
+    function unStakeLP2(
+        uint256 _amountRemove
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
+
+        StakeLPData storage _stakeLPData = stakeLPDatas[_account];
+
+        require(
+            _amountRemove <= _stakeLPData.amountLP &&
+                _amountRemove <= totalStakingLP,
+            "Invalid _amountRemove"
+        );
+
+        uint256 _amountLPWorkingRemove = _getAmountLPWorking(
+            _account,
+            _amountRemove
+        );
+
+        require(
+            _amountLPWorkingRemove <= _stakeLPData.amountLPWorking,
+            "Insufficient _amountLPWorking"
+        );
+
+        uint256 _currentStakingReward = _caculateLPWorkingReward(
+            _account,
+            _stakeLPData.amountLPWorking,
+            _stakeLPData.startBlockNumber,
+            uint128(block.number)
+        );
+
+        unchecked {
+            _stakeLPData.accruedIncomeYGIO += _currentStakingReward;
+
+            _stakeLPData.amountLPWorking -= _amountLPWorkingRemove;
+
+            _stakeLPData.amountLP -= _amountRemove;
+
+            totalStakingLP -= _amountRemove;
+
+            ++countStakeLP;
+        }
+
+        _stakeLPData.endBlockNumber = uint128(block.number);
+
+        if (_stakeLPData.amountLP > 0) {
+            _stakeLPData.startBlockNumber = uint128(block.number);
+        }
+
+        // update Inviters Reward
+        _updateInvitersRewardRemove(_account, _amountRemove);
+
+        _updateWithdrawLPAmount(0);
+
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountRemove);
+
+        emit StakeLP(
+            _account,
+            _amountRemove,
+            _stakeLPData.startBlockNumber,
+            _stakeLPData.endBlockNumber,
+            countStakeLP,
+            StakeState.UNSTAKE
+        );
+
+        return true;
+    }
+
+    function unStakeLP() external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
         StakeLPData storage _stakeLPData = stakeLPDatas[_account];
@@ -359,7 +444,7 @@ contract PoolsOfLP is
             _account,
             _stakeLPData.amountLPWorking,
             _stakeLPData.startBlockNumber,
-            uint64(block.number)
+            uint128(block.number)
         );
 
         unchecked {
@@ -372,17 +457,34 @@ contract PoolsOfLP is
 
         delete _stakeLPData.amountLP;
 
-        _stakeLPData.endBlockNumber = uint64(block.number);
+        _stakeLPData.endBlockNumber = uint128(block.number);
 
         // update Inviters Reward
         _updateInvitersRewardRemove(_account, _amountLP);
 
         _updateWithdrawLPAmount(0);
 
-        totalStakingLP -= _amountLP;
+        require(_amountLP <= totalStakingLP, "unStake Fail");
+
+        unchecked {
+            totalStakingLP -= _amountLP;
+
+            ++countStakeLP;
+        }
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _amountLP);
+
+        emit StakeLP(
+            _account,
+            _amountLP,
+            _stakeLPData.startBlockNumber,
+            _stakeLPData.endBlockNumber,
+            countStakeLP,
+            StakeState.UNSTAKE
+        );
+
+        return true;
     }
 
     function withdrawYGIO(
@@ -399,12 +501,12 @@ contract PoolsOfLP is
                     _account,
                     _stakelPData.amountLPWorking,
                     _stakelPData.startBlockNumber,
-                    uint64(block.number)
+                    uint128(block.number)
                 );
 
                 _stakelPData.accruedIncomeYGIO += rewardYGIO;
 
-                _stakelPData.startBlockNumber = uint64(block.number);
+                _stakelPData.startBlockNumber = uint128(block.number);
             }
 
             uint256 _total = _getTotalBenefit(_account);
@@ -465,8 +567,8 @@ contract PoolsOfLP is
     function _caculateLPWorkingReward(
         address _account,
         uint256 _amountLPWorking,
-        uint64 _startBlockNumber,
-        uint64 _endBlockNumber
+        uint128 _startBlockNumber,
+        uint128 _endBlockNumber
     ) internal view returns (uint256) {
         // working Cycle Number
         uint256 cycleNumber;
@@ -586,7 +688,7 @@ contract PoolsOfLP is
                 uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
                     REWARDRATE_BASE;
 
-                if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+                if (_inviterLPData.startBlockNumber == uint128(block.number)) {
                     _inviterLPData.amountLPWorking += _rewardLPWorking;
                 } else {
                     // caculate inviter reward YGIO
@@ -599,7 +701,7 @@ contract PoolsOfLP is
 
                     _inviterLPData.amountLPWorking += _rewardLPWorking;
 
-                    _inviterLPData.startBlockNumber = uint64(block.number);
+                    _inviterLPData.startBlockNumber = uint128(block.number);
                 }
             }
         }
@@ -613,7 +715,7 @@ contract PoolsOfLP is
 
         uint256 _inviterRewardYGIO = _rewardOneBlockOneLP *
             _amountLPWorking *
-            (uint64(block.number - _startBlockNumber));
+            (uint128(block.number - _startBlockNumber));
 
         return _inviterRewardYGIO;
     }
@@ -635,7 +737,7 @@ contract PoolsOfLP is
             uint256 _rewardLPWorking = (_amountLP * rewardRates[i]) /
                 REWARDRATE_BASE;
 
-            if (_inviterLPData.startBlockNumber == uint64(block.number)) {
+            if (_inviterLPData.startBlockNumber == block.number) {
                 _inviterLPData.amountLPWorking -= _rewardLPWorking;
             } else {
                 // caculate inviter reward YGIO
@@ -648,7 +750,7 @@ contract PoolsOfLP is
 
                 _inviterLPData.amountLPWorking -= _rewardLPWorking;
 
-                _inviterLPData.startBlockNumber = uint64(block.number);
+                _inviterLPData.startBlockNumber = block.number;
             }
         }
     }
@@ -696,7 +798,7 @@ contract PoolsOfLP is
                 _account,
                 _stakeLPData.amountLPWorking,
                 _stakeLPData.startBlockNumber,
-                uint64(block.number)
+                uint128(block.number)
             );
             return _currentStakingReward + _stakeLPData.accruedIncomeYGIO;
         }
