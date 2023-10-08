@@ -101,13 +101,23 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     address private inviteeSigner;
 
     // max inviter reward Level
-    uint8 public rewardLevelMax;
+    uint256 public rewardLevelMax;
 
     // inviter reward Rates
     uint32[8] private inviterRewardRates;
 
-    // Rewards per Block
-    uint256 private RewardsPerBlock = 1e8;
+    uint256 private rewardsTotal = 100_000_000 * 1e18;
+
+    // Rewards per Block 10 YGIO
+    uint256 private rewardsPerBlock = 10e18;
+
+    uint256 private startBlockNumber;
+
+    // ratesPerBlock[0] ratesPerBlock[1]
+    uint128[2] private ratesPerBlock;
+
+    // ratesPerBlock[0] distribute Rates Per Block
+    uint64[4] private distributeRates;
 
     // pool1 pool2's mine owner
     mapping(uint256 => address) mineOwners;
@@ -139,6 +149,8 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
 
     mapping(uint256 => uint256) private stakingLPAmounts;
 
+    mapping(address => uint256[]) private poolsOfAccount;
+
     uint256 private countStakeLP;
 
     // pool1 => (invitee =>  inviter)
@@ -147,7 +159,7 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     // pool1 => (account => StakeLPData)
     mapping(uint256 => mapping(address => StakeLPData)) private stakeLPDatas;
 
-    // inviter => InviterLPData
+    // pool1 => (inviter => InviterLPData)
     mapping(uint256 => mapping(address => InviterLPData))
         private inviterLPDatas;
 
@@ -160,7 +172,8 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         address _inviteeSigner,
         address _ygio,
         address _stake,
-        address _lptoken
+        address _lptoken,
+        uint256 _startBlockNumber
     ) {
         YGIO = _ygio;
         YGIO_STAKE = _stake;
@@ -171,9 +184,15 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         inviteeSigner = _inviteeSigner;
 
         // [mineOwner, inviter1,inviter2,...,inviter5]
-        inviterRewardRates = [uint32(200), 500, 300, 200, 200, 300, 0, 0];
+        inviterRewardRates = [200, 500, 300, 200, 200, 300, 0, 0];
 
+        ratesPerBlock = [8000, 2000];
+
+        distributeRates = [700, 100, 100, 100];
+        // rewardLevelMax must <= 7
         rewardLevelMax = 5;
+
+        startBlockNumber = _startBlockNumber;
     }
 
     function setPause() external onlyOwner {
@@ -184,7 +203,7 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         }
     }
 
-    function setRewardLevelMax(uint8 _rewardLevelMax) external onlyOwner {
+    function setRewardLevelMax(uint256 _rewardLevelMax) external onlyOwner {
         rewardLevelMax = _rewardLevelMax;
     }
 
@@ -196,6 +215,11 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
 
     function getMineOwner(uint256 _poolNumber) external view returns (address) {
         return mineOwners[_poolNumber];
+    }
+
+    function getCurrentTeamRewards() external view returns (uint256) {
+        (((block.number - startBlockNumber) * rewardsPerBlock) *
+            ratesPerBlock[1]) / REWARDRATE_BASE;
     }
 
     function getTotalStakeLP() external view returns (uint256) {
@@ -292,91 +316,96 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         );
     }
 
-    // function stakingLP(
-    //     uint256 _poolNumber,
-    //     uint256 _amountLP,
-    //     address _inviter,
-    //     bytes calldata _signature
-    // )
-    //     external
-    //     whenNotPaused
-    //     nonReentrant
-    //     onlyInvited(_poolNumber, _inviter, _signature)
-    // {
-    //     address _account = _msgSender();
+    function stakingLP(
+        uint256 _poolNumber,
+        uint256 _amountLP,
+        address _inviter,
+        bytes calldata _signature
+    )
+        external
+        whenNotPaused
+        nonReentrant
+        onlyInvited(_poolNumber, _inviter, _signature)
+    {
+        address _account = _msgSender();
 
-    //     uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
+        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
 
-    //     require(
-    //         _balance >= _amountLP && _amountLP > 0,
-    //         "Insufficient balance of LP"
-    //     );
+        require(
+            _balance >= _amountLP && _amountLP > 0,
+            "Insufficient balance of LP"
+        );
 
-    //     StakeLPData storage _stakelPData = stakeLPDatas[_account];
+        StakeLPData storage _stakelPData = stakeLPDatas[_poolNumber][_account];
 
-    //     // The user has lp working
-    //     if (_stakelPData.amountLPWorking > 0) {
-    //         {
-    //             // caculate LP Working Reward
-    //             uint256 rewardYGIO = _caculateLPWorkingReward(
-    //                 _account,
-    //                 _stakelPData.amountLPWorking,
-    //                 _stakelPData.startBlockNumber,
-    //                 uint128(block.number)
-    //             );
+        if (!_checkAccountInPool(_poolNumber, _account)) {
+            if (poolsOfAccount[_account].length == 0) {
+                poolsOfAccount[_account] = [_poolNumber];
+            } else {
+                poolsOfAccount[_account].push(_poolNumber);
+            }
+        }
 
-    //             unchecked {
-    //                 _stakelPData.accruedIncomeYGIO += rewardYGIO;
+        // The user has lp working
+        if (_stakelPData.amountLPWorking > 0) {
+            // {
+            //     // caculate LP Working Reward
+            //     uint256 rewardYGIO = _caculateLPWorkingReward(
+            //         _account,
+            //         _stakelPData.amountLPWorking,
+            //         _stakelPData.startBlockNumber,
+            //         uint128(block.number)
+            //     );
+            //     unchecked {
+            //         _stakelPData.accruedIncomeYGIO += rewardYGIO;
+            //         _stakelPData.amountLP += _amountLP;
+            //     }
+            // }
+            // uint256 _amountLPWorking = _getAmountLPWorking(
+            //     _poolNumber,
+            //     _account,
+            //     _stakelPData.amountLP
+            // );
+            // _stakelPData.amountLPWorking = _amountLPWorking;
+            // _stakelPData.startBlockNumber = uint128(block.number);
+        } else {
+            _stakelPData.amountLP = _amountLP;
 
-    //                 _stakelPData.amountLP += _amountLP;
-    //             }
-    //         }
+            _stakelPData.amountLPWorking = _getAmountLPWorking(
+                _poolNumber,
+                _account,
+                _amountLP
+            );
 
-    //         uint256 _amountLPWorking = _getAmountLPWorking(
-    //             _account,
-    //             _stakelPData.amountLP
-    //         );
+            _stakelPData.startBlockNumber = uint128(block.number);
+        }
 
-    //         _stakelPData.amountLPWorking = _amountLPWorking;
+        unchecked {
+            totalStakingLP += _amountLP;
+            ++countStakeLP;
+        }
 
-    //         _stakelPData.startBlockNumber = uint128(block.number);
-    //     } else {
-    //         _stakelPData.amountLP = _amountLP;
+        // update Inviters Reward
+        // _updateInvitersRewardAdd(_account, _amountLP);
 
-    //         _stakelPData.amountLPWorking = _getAmountLPWorking(
-    //             _account,
-    //             _amountLP
-    //         );
+        // _updateWithdrawLPAmount(_amountLP);
 
-    //         _stakelPData.startBlockNumber = uint128(block.number);
-    //     }
+        // transfer LP
+        IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
+            _account,
+            address(this),
+            _amountLP
+        );
 
-    //     unchecked {
-    //         totalStakingLP += _amountLP;
-    //         ++countStakeLP;
-    //     }
-
-    //     // update Inviters Reward
-    //     // _updateInvitersRewardAdd(_account, _amountLP);
-
-    //     _updateWithdrawLPAmount(_amountLP);
-
-    //     // transfer LP
-    //     IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
-    //         _account,
-    //         address(this),
-    //         _amountLP
-    //     );
-
-    //     emit StakeLP(
-    //         _account,
-    //         _amountLP,
-    //         _stakelPData.startBlockNumber,
-    //         _stakelPData.endBlockNumber,
-    //         countStakeLP,
-    //         StakeState.STAKING
-    //     );
-    // }
+        emit StakeLP(
+            _account,
+            _amountLP,
+            _stakelPData.startBlockNumber,
+            _stakelPData.endBlockNumber,
+            countStakeLP,
+            StakeState.STAKING
+        );
+    }
 
     // function unStakeLP2(
     //     uint256 _amountRemove
@@ -644,6 +673,8 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     }
 
     modifier checkPoolNumber(uint256 _poolNumber, bytes calldata _signature) {
+        require(_poolNumber > 0, "Invalid PoolNumber");
+
         address poolOwner = _msgSender();
 
         bytes memory data = abi.encode(_poolNumber, poolOwner);
@@ -732,7 +763,7 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     //     uint256 _amountLPWorking,
     //     uint256 _startBlockNumber
     // ) internal view returns (uint256) {
-    //     uint256 _rewardOneBlockOneLP = RewardsPerBlock;
+    //     uint256 _rewardOneBlockOneLP = rewardsPerBlock;
 
     //     uint256 _inviterRewardYGIO = _rewardOneBlockOneLP *
     //         _amountLPWorking *
@@ -777,25 +808,25 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     //     }
     // }
 
-    // function _getAmountLPWorking(
-    //     uint256 _poolNumber,
-    //     address _account,
-    //     uint256 _amountLP
-    // ) internal view returns (uint256 _amountLPWorking) {
-    //     (, uint256 _number) = _queryMineOwnerAndInviters(
-    //         _poolNumber,
-    //         _account,
-    //         rewardLevelMax
-    //     );
+    function _getAmountLPWorking(
+        uint256 _poolNumber,
+        address _account,
+        uint256 _amountLP
+    ) internal view returns (uint256 _amountLPWorking) {
+        (, uint256 _number) = _queryMineOwnerAndInviters(
+            _poolNumber,
+            _account,
+            rewardLevelMax
+        );
 
-    //     uint32 rateSum;
+        uint32 rateSum;
 
-    //     for (uint i = 0; i < _number; i++) {
-    //         rateSum += inviterRewardRates[i];
-    //     }
+        for (uint i = 0; i < _number; i++) {
+            rateSum += inviterRewardRates[i];
+        }
 
-    //     _amountLPWorking = _amountLP - (_amountLP * rateSum) / REWARDRATE_BASE;
-    // }
+        _amountLPWorking = _amountLP - (_amountLP * rateSum) / REWARDRATE_BASE;
+    }
 
     // function _getInviteTotalBenefit(
     //     address _account
@@ -828,33 +859,33 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     //     }
     // }
 
-    // function _queryMineOwnerAndInviters(
-    //     uint256 _poolNumber,
-    //     address _invitee,
-    //     uint256 _numberLayers
-    // ) internal view returns (address[] memory, uint256) {
-    //     address[] memory _inviters = new address[](_numberLayers + 1);
+    function _queryMineOwnerAndInviters(
+        uint256 _poolNumber,
+        address _invitee,
+        uint256 _numberLayers
+    ) internal view returns (address[] memory, uint256) {
+        address[] memory _inviters = new address[](_numberLayers + 1);
 
-    //     _inviters[0] = mineOwners[_poolNumber];
+        _inviters[0] = mineOwners[_poolNumber];
 
-    //     uint256 _number = 1;
+        uint256 _number = 1;
 
-    //     for (uint i = 0; i < _numberLayers; ) {
-    //         _invitee = inviters[_invitee];
+        for (uint i = 0; i < _numberLayers; ) {
+            _invitee = inviters[_poolNumber][_invitee];
 
-    //         if (_invitee == ZERO_ADDRESS) break;
+            if (_invitee == ZERO_ADDRESS) break;
 
-    //         _inviters[i + 1] = _invitee;
+            _inviters[i + 1] = _invitee;
 
-    //         unchecked {
-    //             _number += 1;
+            unchecked {
+                _number += 1;
 
-    //             ++i;
-    //         }
-    //     }
+                ++i;
+            }
+        }
 
-    //     return (_inviters, _number);
-    // }
+        return (_inviters, _number);
+    }
 
     function _queryInviters(
         uint256 _poolNumber,
@@ -881,6 +912,13 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         }
 
         return (_inviters, _number);
+    }
+
+    function _checkAccountInPool(
+        uint256 _poolNumber,
+        address _account
+    ) internal view returns (bool) {
+        return stakeLPDatas[_poolNumber][_account].amountLP > 0;
     }
 
     // function _getTotalBenefit(
