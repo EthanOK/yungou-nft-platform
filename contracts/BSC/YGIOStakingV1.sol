@@ -7,9 +7,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract YGIOStakingV1 is Pausable, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
-
+abstract contract YGIOStakingDomain {
     enum StakeType {
         NULL,
         STAKING,
@@ -33,6 +31,15 @@ contract YGIOStakingV1 is Pausable, Ownable, ReentrancyGuard {
         StakeType indexed stakeType,
         uint256 indexed blockNumber
     );
+}
+
+contract YGIOStakingV1 is
+    YGIOStakingDomain,
+    Pausable,
+    Ownable,
+    ReentrancyGuard
+{
+    using Counters for Counters.Counter;
 
     // constant: 1 days
     uint64 public constant ONE_CYCLE = 1;
