@@ -147,7 +147,9 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     // weekStakeIncrementVolumes[][0] : cureent Staking Volume
     mapping(uint256 => uint256[8]) private weekStakeIncrementVolumes;
 
-    mapping(uint256 => uint256) private stakingLPAmounts;
+    mapping(uint256 => uint256) private stakingLPAmountsOfPool;
+
+    mapping(address => uint256) private stakingLPAmountsOfAccount;
 
     mapping(address => uint256[]) private poolsOfAccount;
 
@@ -367,7 +369,6 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
             //     _stakelPData.amountLP
             // );
             // _stakelPData.amountLPWorking = _amountLPWorking;
-            // _stakelPData.startBlockNumber = uint128(block.number);
         } else {
             _stakelPData.amountLP = _amountLP;
 
@@ -376,12 +377,17 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
                 _account,
                 _amountLP
             );
-
-            _stakelPData.startBlockNumber = uint128(block.number);
         }
+
+        _stakelPData.startBlockNumber = uint128(block.number);
 
         unchecked {
             totalStakingLP += _amountLP;
+
+            stakingLPAmountsOfPool[_poolNumber] += _amountLP;
+
+            stakingLPAmountsOfAccount[_account] += _amountLP;
+
             ++countStakeLP;
         }
 
@@ -651,6 +657,8 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
             invitee != mineOwners[_poolNumber],
             "Mine owner cannot participate"
         );
+
+        require(mineOwners[_poolNumber] != ZERO_ADDRESS, "Invalid poolNumber");
 
         if (inviters[_poolNumber][invitee] == ZERO_ADDRESS) {
             if (inviter != mineOwners[_poolNumber]) {
