@@ -81,6 +81,7 @@ abstract contract YGMEStakingDomain {
         uint256 stakeDays;
         uint256 deadline;
     }
+
     struct StakingYGMEData {
         address owner;
         bool stakedState;
@@ -112,6 +113,9 @@ abstract contract YGMEStakingDomain {
 
     // account => staking tokenIds
     mapping(address => uint256[]) stakingTokenIds;
+
+    // account => token amount
+    mapping(address => uint256) stakingYGMEAmounts;
 }
 
 // LPStakingDomain
@@ -211,13 +215,8 @@ contract MinePoolsV2 is
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
 
-    //
+    // stakingDays 0 100 300
     uint64[4] private stakingDays;
-
-    // Rewards per Block 10 YGIO
-    uint256 private rewardsPerBlock = 10e18;
-
-    uint256 private startBlockNumber;
 
     uint256 private callCount;
 
@@ -289,16 +288,68 @@ contract MinePoolsV2 is
         return totalStakingLP;
     }
 
+    function getTotalStakeLP(address _account) external view returns (uint256) {
+        return stakingLPAmounts[_account];
+    }
+
+    function getTotalStakeYGIO(
+        address _account
+    ) external view returns (uint256) {
+        return stakeYGIODatas[_account].totalStaking;
+    }
+
+    function getTotalStakeYGME(
+        address _account
+    ) external view returns (uint256) {
+        return stakingYGMEAmounts[_account];
+    }
+
+    function getTotalStakeYGIOAll() external view returns (uint256) {
+        return totalStakingYGIO;
+    }
+
+    function getTotalStakeYGMEAll() external view returns (uint256) {
+        return totalStakingYGME;
+    }
+
+    function getTotalStakeDays() external view returns (uint256) {
+        return totalStakingLPDays + totalStakingYGIODays + totalStakingYGMEDays;
+    }
+
+    function getTotalStakeLPDays() external view returns (uint256) {
+        return totalStakingLPDays;
+    }
+
+    function getTotalStakeLPDaysOf(
+        address _account
+    ) external view returns (uint256) {
+        return stakingLPDays[_account];
+    }
+
+    function getTotalStakeYGIODays() external view returns (uint256) {
+        return totalStakingYGIODays;
+    }
+
+    function getTotalStakeYGIODaysOf(
+        address _account
+    ) external view returns (uint256) {
+        return stakingYGIODays[_account];
+    }
+
+    function getTotalStakeYGMEDays() external view returns (uint256) {
+        return totalStakingYGMEDays;
+    }
+
+    function getTotalStakeYGMEDaysOf(
+        address _account
+    ) external view returns (uint256) {
+        return stakingYGMEDays[_account];
+    }
+
     function getTotalStakeLPInPools(
         uint256 _poolNumber
     ) external view returns (uint256) {
         return stakingLPAmountsOfPool[_poolNumber];
-    }
-
-    function getTotalStakeLPofAccount(
-        address _account
-    ) external view returns (uint256) {
-        return stakingLPAmounts[_account];
     }
 
     function getTotalStakeLPofAccountInPools(
@@ -504,19 +555,16 @@ contract MinePoolsV2 is
             for (uint i = 0; i < _stakingOrderIds.length; ++i) {
                 uint256 _stakingOrderId = _stakingOrderIds[i];
 
-                StakeLPOrderData memory _stakeLPOrderData = stakeLPOrderDatas[
+                StakeLPOrderData memory _data = stakeLPOrderDatas[
                     _stakingOrderId
                 ];
 
-                require(_stakeLPOrderData.owner == _account, "Invalid account");
+                require(_data.owner == _account, "Invalid account");
+
+                require(_data.poolNumber == _poolNumber, "Invalid poolNumber");
 
                 require(
-                    _stakeLPOrderData.poolNumber == _poolNumber,
-                    "Invalid poolNumber"
-                );
-
-                require(
-                    block.timestamp >= _stakeLPOrderData.endTime,
+                    block.timestamp >= _data.endTime,
                     "Too early to unStake"
                 );
 
@@ -532,18 +580,17 @@ contract MinePoolsV2 is
                 }
 
                 unchecked {
-                    _sumAmountLP += _stakeLPOrderData.amount;
+                    _sumAmountLP += _data.amount;
 
-                    _sumTimes += (_stakeLPOrderData.endTime -
-                        _stakeLPOrderData.startTime);
+                    _sumTimes += (_data.endTime - _data.startTime);
                 }
 
                 emit StakeLP(
                     _poolNumber,
                     _account,
-                    _stakeLPOrderData.amount,
-                    _stakeLPOrderData.startTime,
-                    _stakeLPOrderData.endTime,
+                    _data.amount,
+                    _data.startTime,
+                    _data.endTime,
                     StakeLPType.UNSTAKEORDER,
                     _stakingOrderId,
                     callCount,
@@ -712,18 +759,14 @@ contract MinePoolsV2 is
             for (uint i = 0; i < _stakingOrderIds.length; ++i) {
                 uint256 _stakingOrderId = _stakingOrderIds[i];
 
-                StakeYGIOOrderData
-                    memory _stakeYGIOOrderData = stakeYGIOOrderDatas[
-                        _stakingOrderId
-                    ];
+                StakeYGIOOrderData memory _data = stakeYGIOOrderDatas[
+                    _stakingOrderId
+                ];
+
+                require(_data.owner == _account, "Invalid account");
 
                 require(
-                    _stakeYGIOOrderData.owner == _account,
-                    "Invalid account"
-                );
-
-                require(
-                    block.timestamp >= _stakeYGIOOrderData.endTime,
+                    block.timestamp >= _data.endTime,
                     "Too early to unStake"
                 );
 
@@ -739,17 +782,16 @@ contract MinePoolsV2 is
                 }
 
                 unchecked {
-                    _sumAmountYGIO += _stakeYGIOOrderData.amount;
+                    _sumAmountYGIO += _data.amount;
 
-                    _sumTimes += (_stakeYGIOOrderData.endTime -
-                        _stakeYGIOOrderData.startTime);
+                    _sumTimes += (_data.endTime - _data.startTime);
                 }
 
                 emit StakeYGIO(
                     _account,
-                    _stakeYGIOOrderData.amount,
-                    _stakeYGIOOrderData.startTime,
-                    _stakeYGIOOrderData.endTime,
+                    _data.amount,
+                    _data.startTime,
+                    _data.endTime,
                     StakeYGIOType.UNSTAKEORDER,
                     _stakingOrderId,
                     callCount,
@@ -839,6 +881,8 @@ contract MinePoolsV2 is
         unchecked {
             totalStakingYGME += _len;
 
+            stakingYGMEAmounts[_account] += _len;
+
             totalStakingYGMEDays += (_paras.stakeDays * _len);
 
             stakingYGMEDays[_account] += (_paras.stakeDays * _len);
@@ -904,6 +948,8 @@ contract MinePoolsV2 is
         uint256 _days = _sumTimes / ONEDAY;
 
         totalStakingYGME -= _length;
+
+        stakingYGMEAmounts[_account] -= _length;
 
         totalStakingYGMEDays -= _days;
 
