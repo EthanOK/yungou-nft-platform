@@ -181,10 +181,10 @@ abstract contract MinePoolsDomain {
 }
 
 contract MinePoolsV2 is
-    YGIOStakingDomain,
-    MinePoolsDomain,
     Pausable,
     Ownable,
+    YGIOStakingDomain,
+    MinePoolsDomain,
     ReentrancyGuard
 {
     using Counters for Counters.Counter;
@@ -670,6 +670,114 @@ contract MinePoolsV2 is
         return true;
     }
 
+    function unStakeYGIO(
+        uint256 _amountCash,
+        uint256[] calldata _stakingOrderIds
+    ) external whenNotPaused nonReentrant returns (bool) {
+        require(
+            (_amountCash > 0 && _stakingOrderIds.length == 0) ||
+                (_amountCash == 0 && _stakingOrderIds.length > 0),
+            "Invalid Paras"
+        );
+
+        address _account = _msgSender();
+
+        uint256 _sumAmountYGIO;
+
+        uint256 _sumTimes;
+
+        StakeYGIOData storage _stakeYGIOData = stakeYGIODatas[_account];
+
+        if (_amountCash > 0) {
+            require(_amountCash <= _stakeYGIOData.cash);
+            _stakeYGIOData.cash -= _amountCash;
+
+            _sumAmountYGIO = _amountCash;
+
+            ++callCount;
+
+            emit StakeYGIO(
+                _account,
+                _amountCash,
+                0,
+                0,
+                StakeYGIOType.UNSTAKECASH,
+                0,
+                callCount,
+                block.number
+            );
+        } else if (_stakingOrderIds.length > 0) {
+            ++callCount;
+
+            for (uint i = 0; i < _stakingOrderIds.length; ++i) {
+                uint256 _stakingOrderId = _stakingOrderIds[i];
+
+                StakeYGIOOrderData
+                    memory _stakeYGIOOrderData = stakeYGIOOrderDatas[
+                        _stakingOrderId
+                    ];
+
+                require(
+                    _stakeYGIOOrderData.owner == _account,
+                    "Invalid account"
+                );
+
+                require(
+                    block.timestamp >= _stakeYGIOOrderData.endTime,
+                    "Too early to unStake"
+                );
+
+                uint256 _len = _stakeYGIOData.stakingOrderIds.length;
+
+                for (uint256 j = 0; j < _len; ++j) {
+                    if (_stakeYGIOData.stakingOrderIds[j] == _stakingOrderId) {
+                        _stakeYGIOData.stakingOrderIds[j] = _stakeYGIOData
+                            .stakingOrderIds[_len - 1];
+                        _stakeYGIOData.stakingOrderIds.pop();
+                        break;
+                    }
+                }
+
+                unchecked {
+                    _sumAmountYGIO += _stakeYGIOOrderData.amount;
+
+                    _sumTimes += (_stakeYGIOOrderData.endTime -
+                        _stakeYGIOOrderData.startTime);
+                }
+
+                emit StakeYGIO(
+                    _account,
+                    _stakeYGIOOrderData.amount,
+                    _stakeYGIOOrderData.startTime,
+                    _stakeYGIOOrderData.endTime,
+                    StakeYGIOType.UNSTAKEORDER,
+                    _stakingOrderId,
+                    callCount,
+                    block.number
+                );
+
+                delete stakeYGIOOrderDatas[_stakingOrderId];
+            }
+        }
+
+        {
+            uint256 _days = _sumTimes / ONEDAY;
+
+            totalStakingYGIO -= _sumAmountYGIO;
+
+            totalStakingYGIODays -= _days;
+
+            _stakeYGIOData.totalStaking -= _sumAmountYGIO;
+
+            stakingYGIODays[_account] -= _days;
+        }
+
+        // transfer YGIO
+        IERC20(YGIO).transfer(_account, _sumAmountYGIO);
+
+        return true;
+    }
+
     function _verifyInviter(
         address _invitee,
         StakingLPParas calldata _paras,
@@ -715,7 +823,7 @@ contract MinePoolsV2 is
         address _account,
         StakingYGIOParas calldata _paras,
         bytes calldata _signature
-    ) internal {
+    ) internal view {
         require(block.timestamp < _paras.deadline, "Signature has expired");
 
         bytes memory data = abi.encode(
