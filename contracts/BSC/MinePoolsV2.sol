@@ -76,6 +76,11 @@ abstract contract YGMEStakingDomain {
         UNSTAKEONLYOWNER
     }
 
+    struct StakingYGMEParas {
+        uint256[] tokenIds;
+        uint256 stakeDays;
+        uint256 deadline;
+    }
     struct StakingYGMEData {
         address owner;
         bool stakedState;
@@ -89,11 +94,28 @@ abstract contract YGMEStakingDomain {
         uint256 startTime,
         uint256 endTime,
         StakeYGMEType indexed stakeType,
+        uint256 callCount,
         uint256 indexed blockNumber
     );
+
+    // total Staking YGME
+    uint256 totalStakingYGME;
+
+    // total Staking YGME days(All user)
+    uint256 totalStakingYGMEDays;
+
+    // account => total staking YGME Days
+    mapping(address => uint256) stakingYGMEDays;
+
+    // tokenId => StakingYGMEData
+    mapping(uint256 => StakingYGMEData) stakingYGMEDatas;
+
+    // account => staking tokenIds
+    mapping(address => uint256[]) stakingTokenIds;
 }
 
-abstract contract MinePoolsDomain {
+// LPStakingDomain
+abstract contract LPStakingDomain {
     enum StakeLPType {
         NULL,
         STAKING_HAS_DEADLINE,
@@ -167,7 +189,8 @@ contract MinePoolsV2 is
     Pausable,
     Ownable,
     YGIOStakingDomain,
-    MinePoolsDomain,
+    YGMEStakingDomain,
+    LPStakingDomain,
     ReentrancyGuard
 {
     using Counters for Counters.Counter;
@@ -197,12 +220,6 @@ contract MinePoolsV2 is
     uint256 private startBlockNumber;
 
     uint256 private callCount;
-
-    // total Staking YGME days(All user)
-    uint256 private totalStakingYGMEDays;
-
-    // account => total staking YGME Days
-    mapping(address => uint256) stakingYGMEDays;
 
     // poolId => mineOwner
     mapping(uint256 => address) mineOwners;
@@ -761,6 +778,140 @@ contract MinePoolsV2 is
         return true;
     }
 
+    function stakingYGME(
+        StakingYGMEParas calldata _paras,
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant returns (bool) {
+        uint256 _len = _paras.tokenIds.length;
+
+        require(_len > 0, "Invalid tokenIds");
+
+        address _account = _msgSender();
+
+        _checkStakeDays(_paras.stakeDays);
+
+        _verifyStakeYGME(_account, _paras, _signature);
+
+        ++callCount;
+
+        for (uint256 i = 0; i < _len; ++i) {
+            uint256 _tokenId = _paras.tokenIds[i];
+
+            require(
+                !stakingYGMEDatas[_tokenId].stakedState,
+                "Invalid stake state"
+            );
+
+            require(
+                IERC721(YGME).ownerOf(_tokenId) == _account,
+                "Invalid owner"
+            );
+
+            StakingYGMEData memory _data = StakingYGMEData({
+                owner: _account,
+                stakedState: true,
+                startTime: uint128(block.timestamp),
+                endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
+            });
+
+            stakingYGMEDatas[_tokenId] = _data;
+
+            if (stakingTokenIds[_account].length == 0) {
+                stakingTokenIds[_account] = [_tokenId];
+            } else {
+                stakingTokenIds[_account].push(_tokenId);
+            }
+
+            //transfer YGME
+            IERC721(YGME).safeTransferFrom(_account, address(this), _tokenId);
+
+            emit StakingYGME(
+                _account,
+                _tokenId,
+                _data.startTime,
+                _data.endTime,
+                StakeYGMEType.STAKING,
+                callCount,
+                block.number
+            );
+        }
+
+        unchecked {
+            totalStakingYGME += _len;
+
+            totalStakingYGMEDays += (_paras.stakeDays * _len);
+
+            stakingYGMEDays[_account] += (_paras.stakeDays * _len);
+        }
+
+        return true;
+    }
+
+    function unStakeYGME(
+        uint256[] calldata _tokenIds
+    ) external whenNotPaused nonReentrant returns (bool) {
+        uint256 _length = _tokenIds.length;
+
+        address _account = _msgSender();
+
+        require(_length > 0, "Invalid tokenIds");
+
+        uint256 _sumTimes;
+
+        ++callCount;
+
+        for (uint256 i = 0; i < _length; ++i) {
+            uint256 _tokenId = _tokenIds[i];
+
+            StakingYGMEData memory _data = stakingYGMEDatas[_tokenId];
+
+            require(_data.owner == _account, "Invalid account");
+
+            require(_data.stakedState, "Invalid stake state");
+
+            require(block.timestamp >= _data.endTime, "Too early to unStake");
+
+            uint256 _len = stakingTokenIds[_account].length;
+
+            for (uint256 j = 0; j < _len; ++j) {
+                if (stakingTokenIds[_account][j] == _tokenId) {
+                    stakingTokenIds[_account][j] = stakingTokenIds[_account][
+                        _len - 1
+                    ];
+                    stakingTokenIds[_account].pop();
+                    break;
+                }
+            }
+
+            emit StakingYGME(
+                _account,
+                _tokenId,
+                _data.startTime,
+                _data.endTime,
+                StakeYGMEType.UNSTAKE,
+                callCount,
+                block.number
+            );
+
+            _sumTimes += (_data.endTime - _data.startTime);
+
+            delete stakingYGMEDatas[_tokenId];
+
+            //transfer YGME
+            IERC721(YGME).safeTransferFrom(address(this), _account, _tokenId);
+        }
+
+        uint256 _days = _sumTimes / ONEDAY;
+
+        totalStakingYGME -= _length;
+
+        totalStakingYGMEDays -= _days;
+
+        stakingYGMEDays[_account] -= _days;
+
+        return true;
+    }
+
     function _verifyInviter(
         address _invitee,
         StakingLPParas calldata _paras,
@@ -812,6 +963,25 @@ contract MinePoolsV2 is
         bytes memory data = abi.encode(
             _account,
             _paras.amount,
+            _paras.stakeDays,
+            _paras.deadline
+        );
+
+        bytes32 hash = keccak256(data);
+
+        _verifySignature(hash, _signature);
+    }
+
+    function _verifyStakeYGME(
+        address _account,
+        StakingYGMEParas calldata _paras,
+        bytes calldata _signature
+    ) internal view {
+        require(block.timestamp < _paras.deadline, "Signature has expired");
+
+        bytes memory data = abi.encode(
+            _account,
+            _paras.tokenIds,
             _paras.stakeDays,
             _paras.deadline
         );
