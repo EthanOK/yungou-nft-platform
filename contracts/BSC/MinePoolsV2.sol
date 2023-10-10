@@ -10,23 +10,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-// LP interface
-interface IPancakePair {
-    function decimals() external pure returns (uint8);
-
-    function totalSupply() external view returns (uint);
-
-    function balanceOf(address owner) external view returns (uint);
-
-    function transfer(address to, uint value) external returns (bool);
-
-    function transferFrom(
-        address from,
-        address to,
-        uint value
-    ) external returns (bool);
-}
-
 // YGIOStakingDomain
 abstract contract YGIOStakingDomain {
     enum StakeYGIOType {
@@ -340,7 +323,7 @@ contract MinePoolsV2 is
 
         // check condition
         require(
-            IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(poolOwner) >= needAmount,
+            IERC20(LPTOKEN_YGIO_USDT).balanceOf(poolOwner) >= needAmount,
             "Insufficient balance of LP"
         );
 
@@ -349,7 +332,7 @@ contract MinePoolsV2 is
         balanceMineOwners[poolOwner] = needAmount;
 
         // transfer LP
-        IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
+        IERC20(LPTOKEN_YGIO_USDT).transferFrom(
             poolOwner,
             address(this),
             needAmount
@@ -370,7 +353,7 @@ contract MinePoolsV2 is
 
         _verifyInviter(_account, _paras, _signature);
 
-        uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
+        uint256 _balance = IERC20(LPTOKEN_YGIO_USDT).balanceOf(_account);
 
         require(
             _balance >= _paras.amount && _paras.amount > 0,
@@ -439,7 +422,7 @@ contract MinePoolsV2 is
         }
 
         // transfer LP
-        IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
+        IERC20(LPTOKEN_YGIO_USDT).transferFrom(
             _account,
             address(this),
             _paras.amount
@@ -571,7 +554,7 @@ contract MinePoolsV2 is
         }
 
         // transfer LP
-        IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _sumAmountLP);
+        IERC20(LPTOKEN_YGIO_USDT).transfer(_account, _sumAmountLP);
 
         if (!_checkAccountInPool(_poolNumber, _account)) {
             uint256 _len = poolsOfAccount[_account].length;
