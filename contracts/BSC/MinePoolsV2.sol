@@ -160,6 +160,24 @@ abstract contract MinePoolsDomain {
         uint256 amount,
         uint256 blockNumber
     );
+
+    // total Staking LP Amount(All user exclude mineOwner)
+    uint256 totalStakingLP;
+
+    // total Staking LP days(All user)
+    uint256 totalStakingLPDays;
+
+    // account => total stakingLPAmount
+    mapping(address => uint256) stakingLPAmounts;
+
+    // account => total staking LP Days
+    mapping(address => uint256) stakingLPDays;
+
+    // poolId => account => StakeLPData
+    mapping(uint256 => mapping(address => StakeLPData)) stakeLPDatas;
+
+    // orderId => StakeLPOrderData
+    mapping(uint256 => StakeLPOrderData) stakeLPOrderDatas;
 }
 
 contract MinePoolsV2 is
@@ -197,48 +215,30 @@ contract MinePoolsV2 is
 
     uint256 private callCount;
 
-    // total Staking LP Amount(Not included Balance of Pool Mine Owner)
-    uint256 private totalStakingLP;
-
-    // total Staking LP days(All user)
-    uint256 private totalStakingLPDays;
-
     // total Staking YGME days(All user)
     uint256 private totalStakingYGMEDays;
-
-    // account => total staking LP Days
-    mapping(address => uint256) stakingLPDays;
 
     // account => total staking YGME Days
     mapping(address => uint256) stakingYGMEDays;
 
-    // pool1 => mineOwner
+    // poolId => mineOwner
     mapping(uint256 => address) mineOwners;
 
     // Conditions for becoming a mine owner
-    // pool => amount
+    // poolId => amount
     mapping(uint256 => uint256) conditionmMineOwnerPools;
 
     // mineOwner => lp balance
     mapping(address => uint256) balanceMineOwners;
 
-    // Pool => total stakingLPAmount
+    // poolId => total stakingLPAmount
     mapping(uint256 => uint256) private stakingLPAmountsOfPool;
 
-    // User => total stakingLPAmount
-    mapping(address => uint256) private stakingLPAmounts;
-
-    // User  => participation pool
+    // account  => participation pool
     mapping(address => uint256[]) private poolsOfAccount;
 
-    // pool1 => (invitee =>  inviter)
+    // poolId => (invitee =>  inviter)
     mapping(uint256 => mapping(address => address)) private inviters;
-
-    // stakingOrderId => StakeLPOrderData
-    mapping(uint256 => StakeLPOrderData) private stakeLPOrderDatas;
-
-    // pool1 =>  Account's Cash LP
-    mapping(uint256 => mapping(address => StakeLPData)) private stakeLPDatas;
 
     constructor(
         address _ygio,
