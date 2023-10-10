@@ -198,10 +198,10 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         private stakeLPAccountsInPools;
 
     constructor(
-        address _inviteeSigner,
         address _ygio,
         address _ygme,
-        address _lptoken
+        address _lptoken,
+        address _inviteeSigner
     ) {
         YGIO = _ygio;
         YGME = _ygme;
@@ -532,6 +532,20 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
 
         // transfer LP
         IPancakePair(LPTOKEN_YGIO_USDT).transfer(_account, _sumAmountLP);
+
+        if (!_checkAccountInPool(_poolNumber, _account)) {
+            uint256 _len = poolsOfAccount[_account].length;
+
+            for (uint256 j = 0; j < _len; ++j) {
+                if (poolsOfAccount[_account][j] == _poolNumber) {
+                    poolsOfAccount[_account][j] = poolsOfAccount[_account][
+                        _len - 1
+                    ];
+                    poolsOfAccount[_account].pop();
+                    break;
+                }
+            }
+        }
 
         return true;
     }
