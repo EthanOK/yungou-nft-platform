@@ -220,8 +220,9 @@ contract MinePoolsV1 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     }
 
     function getCurrentTeamRewards() external view returns (uint256) {
-        (((block.number - startBlockNumber) * rewardsPerBlock) *
-            ratesPerBlock[1]) / REWARDRATE_BASE;
+        return
+            (((block.number - startBlockNumber) * rewardsPerBlock) *
+                ratesPerBlock[1]) / REWARDRATE_BASE;
     }
 
     function getTotalStakeLP() external view returns (uint256) {
