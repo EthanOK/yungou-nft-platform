@@ -88,6 +88,14 @@ abstract contract MinePoolsDomain {
         UNSTAKEONLYOWNER
     }
 
+    struct StakingLPParas {
+        uint256 poolNumber;
+        uint256 amountLP;
+        uint256 stakeDays;
+        address inviter;
+        uint256 deadline;
+    }
+
     struct StakeLPData {
         address owner;
         uint256 poolNumber;
@@ -139,6 +147,9 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     address private inviteeSigner;
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
+
+    //
+    uint64[4] private stakingDays;
 
     // Rewards per Block 10 YGIO
     uint256 private rewardsPerBlock = 10e18;
@@ -208,6 +219,8 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         LPTOKEN_YGIO_USDT = _lptoken;
 
         inviteeSigner = _inviteeSigner;
+
+        stakingDays = [0, 100, 300, 0];
     }
 
     function setPause() external onlyOwner {
@@ -316,49 +329,42 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
     }
 
     function stakingLP(
-        uint256 _poolNumber,
-        uint256 _amountLP,
-        uint256 _days,
-        address _inviter,
-        uint256 _deadline,
+        StakingLPParas calldata _paras,
         bytes calldata _signature
-    )
-        external
-        whenNotPaused
-        nonReentrant
-        checkInviter(_poolNumber, _inviter, _deadline, _signature)
-        returns (bool)
-    {
-        uint256 _stakeTime = _days * ONEDAY;
-
+    ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
+
+        _checkStakeDays(_paras.stakeDays);
+
+        _verifyInviter(_account, _paras, _signature);
 
         uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
 
         require(
-            _balance >= _amountLP && _amountLP > 0,
+            _balance >= _paras.amountLP && _paras.amountLP > 0,
             "Insufficient balance of LP"
         );
 
         StakeLPAccount storage _stakeLPAccount = stakeLPAccountsInPools[
-            _poolNumber
+            _paras.poolNumber
         ][_account];
 
-        if (!_checkAccountInPool(_poolNumber, _account)) {
+        if (!_checkAccountInPool(_paras.poolNumber, _account)) {
             if (poolsOfAccount[_account].length == 0) {
-                poolsOfAccount[_account] = [_poolNumber];
+                poolsOfAccount[_account] = [_paras.poolNumber];
             } else {
-                poolsOfAccount[_account].push(_poolNumber);
+                poolsOfAccount[_account].push(_paras.poolNumber);
             }
         }
 
         StakeLPType _stakeType;
+
         uint256 _stakeOrderId;
 
-        if (_stakeTime == 0) {
+        if (_paras.stakeDays == 0) {
             _stakeType = StakeLPType.STAKING_NO_DEADLINE;
 
-            _stakeLPAccount.cashLP += _amountLP;
+            _stakeLPAccount.cashLP += _paras.amountLP;
         } else {
             _stakeType = StakeLPType.STAKING_HAS_DEADLINE;
 
@@ -374,26 +380,28 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
 
                 stakeLPDatas[_stakeOrderId] = StakeLPData({
                     owner: _account,
-                    poolNumber: _poolNumber,
-                    amountLP: _amountLP,
+                    poolNumber: _paras.poolNumber,
+                    amountLP: _paras.amountLP,
                     startTime: uint128(block.timestamp),
-                    endTime: uint128(block.timestamp + _stakeTime)
+                    endTime: uint128(
+                        block.timestamp + _paras.stakeDays * ONEDAY
+                    )
                 });
             }
         }
 
         unchecked {
-            totalStakingLP += _amountLP;
+            totalStakingLP += _paras.amountLP;
 
-            totalStakingLPDays += _days;
+            totalStakingLPDays += _paras.stakeDays;
 
-            _stakeLPAccount.totalStakingLP += _amountLP;
+            _stakeLPAccount.totalStakingLP += _paras.amountLP;
 
-            stakingLPAmountsOfPool[_poolNumber] += _amountLP;
+            stakingLPAmountsOfPool[_paras.poolNumber] += _paras.amountLP;
 
-            stakingLPAmountsOfAccount[_account] += _amountLP;
+            stakingLPAmountsOfAccount[_account] += _paras.amountLP;
 
-            stakingLPDaysOfAccount[_account] += _days;
+            stakingLPDaysOfAccount[_account] += _paras.stakeDays;
 
             ++callCount;
         }
@@ -402,15 +410,15 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             _account,
             address(this),
-            _amountLP
+            _paras.amountLP
         );
 
         emit StakeLP(
-            _poolNumber,
+            _paras.poolNumber,
             _account,
-            _amountLP,
+            _paras.amountLP,
             block.timestamp,
-            block.timestamp + _stakeTime,
+            block.timestamp + _paras.stakeDays * ONEDAY,
             _stakeType,
             _stakeOrderId,
             callCount,
@@ -550,46 +558,45 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         return true;
     }
 
-    modifier checkInviter(
-        uint256 _poolNumber,
-        address inviter,
-        uint256 _deadline,
-        bytes calldata signature
-    ) {
-        address invitee = _msgSender();
-
-        require(block.timestamp < _deadline, "Signature has expired");
+    function _verifyInviter(
+        address _invitee,
+        StakingLPParas calldata _paras,
+        bytes calldata _signature
+    ) internal {
+        require(block.timestamp < _paras.deadline, "Signature has expired");
 
         require(
-            invitee != mineOwners[_poolNumber],
+            _invitee != mineOwners[_paras.poolNumber],
             "Mine owner cannot participate"
         );
 
-        require(mineOwners[_poolNumber] != ZERO_ADDRESS, "Invalid poolNumber");
+        require(
+            mineOwners[_paras.poolNumber] != ZERO_ADDRESS,
+            "Invalid poolNumber"
+        );
 
-        if (inviters[_poolNumber][invitee] == ZERO_ADDRESS) {
-            if (inviter != mineOwners[_poolNumber]) {
+        if (inviters[_paras.poolNumber][_invitee] == ZERO_ADDRESS) {
+            if (_paras.inviter != mineOwners[_paras.poolNumber]) {
                 // Is the inviter valid?
                 require(
-                    inviters[_poolNumber][inviter] != ZERO_ADDRESS,
+                    inviters[_paras.poolNumber][_paras.inviter] != ZERO_ADDRESS,
                     "Invalid inviter"
                 );
             }
             // Whether the invitee has been invited?
             bytes memory data = abi.encode(
-                _poolNumber,
-                invitee,
-                inviter,
-                _deadline
+                _paras.poolNumber,
+                _invitee,
+                _paras.inviter,
+                _paras.deadline
             );
 
             bytes32 hash = keccak256(data);
 
-            _verifySignature(hash, signature);
+            _verifySignature(hash, _signature);
 
-            inviters[_poolNumber][invitee] = inviter;
+            inviters[_paras.poolNumber][_invitee] = _paras.inviter;
         }
-        _;
     }
 
     modifier checkPoolNumber(uint256 _poolNumber, bytes calldata _signature) {
@@ -660,6 +667,16 @@ contract MinePoolsV2 is MinePoolsDomain, Pausable, Ownable, ReentrancyGuard {
         } else {
             return false;
         }
+    }
+
+    function _checkStakeDays(uint256 _stakeDays) internal view {
+        require(
+            _stakeDays == stakingDays[0] ||
+                _stakeDays == stakingDays[1] ||
+                _stakeDays == stakingDays[2] ||
+                _stakeDays == stakingDays[3],
+            "Invalid stakeDays"
+        );
     }
 
     function _currentTimeStampRound()
