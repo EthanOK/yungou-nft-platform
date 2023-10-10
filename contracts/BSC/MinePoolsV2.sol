@@ -31,24 +31,26 @@ interface IPancakePair {
 abstract contract YGIOStakingDomain {
     enum StakeYGIOType {
         NULL,
-        STAKING,
-        UNSTAKE,
+        STAKING_HAS_DEADLINE,
+        STAKING_NO_DEADLINE,
+        UNSTAKECASH,
+        UNSTAKEORDER,
         UNSTAKEONLYOWNER
     }
 
     struct StakingYGIOParas {
-        uint256 amountLP;
+        uint256 amount;
         uint256 stakeDays;
         uint256 deadline;
     }
 
-    struct StakeYGIOAccountData {
-        uint256 cashYGIO;
+    struct StakeYGIOData {
+        uint256 cash;
         uint256[] stakingOrderIds;
-        uint256 totalStakingYGIO;
+        uint256 totalStaking;
     }
 
-    struct StakingYGIOOrderData {
+    struct StakeYGIOOrderData {
         address owner;
         uint256 amount;
         uint128 startTime;
@@ -56,14 +58,30 @@ abstract contract YGIOStakingDomain {
     }
 
     event StakeYGIO(
-        uint256 orderId,
         address indexed account,
         uint256 amount,
         uint256 startTime,
         uint256 endTime,
         StakeYGIOType indexed stakeType,
+        uint256 orderId,
+        uint256 callCount,
         uint256 indexed blockNumber
     );
+
+    // total Staking YGIO
+    uint256 totalStakingYGIO;
+
+    // total Staking YGIO days(All user)
+    uint256 totalStakingYGIODays;
+
+    // account => total staking YGIO Days
+    mapping(address => uint256) stakingYGIODays;
+
+    // account => StakeYGIOrderData
+    mapping(address => StakeYGIOData) stakeYGIODatas;
+
+    // orderId => StakeYGIOOrderData
+    mapping(uint256 => StakeYGIOOrderData) stakeYGIOOrderDatas;
 }
 
 // YGMEStakingDomain
@@ -104,7 +122,7 @@ abstract contract MinePoolsDomain {
 
     struct StakingLPParas {
         uint256 poolNumber;
-        uint256 amountLP;
+        uint256 amount;
         uint256 stakeDays;
         address inviter;
         uint256 deadline;
@@ -113,15 +131,15 @@ abstract contract MinePoolsDomain {
     struct StakeLPOrderData {
         address owner;
         uint256 poolNumber;
-        uint256 amountLP;
+        uint256 amount;
         uint128 startTime;
         uint128 endTime;
     }
 
     struct StakeLPData {
-        uint256 cashLP;
+        uint256 cash;
         uint256[] stakingOrderIds;
-        uint256 totalStakingLP;
+        uint256 totalStaking;
     }
 
     event StakeLP(
@@ -163,6 +181,7 @@ contract MinePoolsV2 is
     address public immutable YGME;
 
     Counters.Counter private _currentStakingLPOrderId;
+    Counters.Counter private _currentStakingYGIOOrderId;
 
     address private inviteeSigner;
 
@@ -184,20 +203,14 @@ contract MinePoolsV2 is
     // total Staking LP days(All user)
     uint256 private totalStakingLPDays;
 
-    // total Staking YGIO days(All user)
-    uint256 private totalStakingYGIODays;
-
     // total Staking YGME days(All user)
     uint256 private totalStakingYGMEDays;
 
-    // User => total staking LP Days
-    mapping(address => uint256) stakingLPDaysOfAccount;
+    // account => total staking LP Days
+    mapping(address => uint256) stakingLPDays;
 
-    // User => total staking YGIO Days
-    mapping(address => uint256) stakingYGIODaysOfAccount;
-
-    // User => total staking YGME Days
-    mapping(address => uint256) stakingYGMEDaysOfAccount;
+    // account => total staking YGME Days
+    mapping(address => uint256) stakingYGMEDays;
 
     // pool1 => mineOwner
     mapping(uint256 => address) mineOwners;
@@ -213,7 +226,7 @@ contract MinePoolsV2 is
     mapping(uint256 => uint256) private stakingLPAmountsOfPool;
 
     // User => total stakingLPAmount
-    mapping(address => uint256) private stakingLPAmountsOfAccount;
+    mapping(address => uint256) private stakingLPAmounts;
 
     // User  => participation pool
     mapping(address => uint256[]) private poolsOfAccount;
@@ -285,14 +298,14 @@ contract MinePoolsV2 is
     function getTotalStakeLPofAccount(
         address _account
     ) external view returns (uint256) {
-        return stakingLPAmountsOfAccount[_account];
+        return stakingLPAmounts[_account];
     }
 
     function getTotalStakeLPofAccountInPools(
         uint256 _poolNumber,
         address _account
     ) external view returns (uint256) {
-        return stakeLPDatas[_poolNumber][_account].totalStakingLP;
+        return stakeLPDatas[_poolNumber][_account].totalStaking;
     }
 
     function queryInviters(
@@ -360,7 +373,7 @@ contract MinePoolsV2 is
         uint256 _balance = IPancakePair(LPTOKEN_YGIO_USDT).balanceOf(_account);
 
         require(
-            _balance >= _paras.amountLP && _paras.amountLP > 0,
+            _balance >= _paras.amount && _paras.amount > 0,
             "LP: Insufficient Balance"
         );
 
@@ -383,7 +396,7 @@ contract MinePoolsV2 is
         if (_paras.stakeDays == 0) {
             _stakeType = StakeLPType.STAKING_NO_DEADLINE;
 
-            _stakeLPData.cashLP += _paras.amountLP;
+            _stakeLPData.cash += _paras.amount;
         } else {
             _stakeType = StakeLPType.STAKING_HAS_DEADLINE;
 
@@ -400,7 +413,7 @@ contract MinePoolsV2 is
                 stakeLPOrderDatas[_stakeOrderId] = StakeLPOrderData({
                     owner: _account,
                     poolNumber: _paras.poolNumber,
-                    amountLP: _paras.amountLP,
+                    amount: _paras.amount,
                     startTime: uint128(block.timestamp),
                     endTime: uint128(
                         block.timestamp + _paras.stakeDays * ONEDAY
@@ -410,17 +423,17 @@ contract MinePoolsV2 is
         }
 
         unchecked {
-            totalStakingLP += _paras.amountLP;
+            totalStakingLP += _paras.amount;
 
             totalStakingLPDays += _paras.stakeDays;
 
-            _stakeLPData.totalStakingLP += _paras.amountLP;
+            _stakeLPData.totalStaking += _paras.amount;
 
-            stakingLPAmountsOfPool[_paras.poolNumber] += _paras.amountLP;
+            stakingLPAmountsOfPool[_paras.poolNumber] += _paras.amount;
 
-            stakingLPAmountsOfAccount[_account] += _paras.amountLP;
+            stakingLPAmounts[_account] += _paras.amount;
 
-            stakingLPDaysOfAccount[_account] += _paras.stakeDays;
+            stakingLPDays[_account] += _paras.stakeDays;
 
             ++callCount;
         }
@@ -429,13 +442,13 @@ contract MinePoolsV2 is
         IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
             _account,
             address(this),
-            _paras.amountLP
+            _paras.amount
         );
 
         emit StakeLP(
             _paras.poolNumber,
             _account,
-            _paras.amountLP,
+            _paras.amount,
             block.timestamp,
             block.timestamp + _paras.stakeDays * ONEDAY,
             _stakeType,
@@ -467,8 +480,8 @@ contract MinePoolsV2 is
         StakeLPData storage _stakeLPData = stakeLPDatas[_poolNumber][_account];
 
         if (_amountCash > 0) {
-            require(_amountCash <= _stakeLPData.cashLP);
-            _stakeLPData.cashLP -= _amountCash;
+            require(_amountCash <= _stakeLPData.cash);
+            _stakeLPData.cash -= _amountCash;
 
             _sumAmountLP = _amountCash;
 
@@ -519,7 +532,7 @@ contract MinePoolsV2 is
                 }
 
                 unchecked {
-                    _sumAmountLP += _stakeLPOrderData.amountLP;
+                    _sumAmountLP += _stakeLPOrderData.amount;
 
                     _sumTimes += (_stakeLPOrderData.endTime -
                         _stakeLPOrderData.startTime);
@@ -528,7 +541,7 @@ contract MinePoolsV2 is
                 emit StakeLP(
                     _poolNumber,
                     _account,
-                    _stakeLPOrderData.amountLP,
+                    _stakeLPOrderData.amount,
                     _stakeLPOrderData.startTime,
                     _stakeLPOrderData.endTime,
                     StakeLPType.UNSTAKEORDER,
@@ -548,13 +561,13 @@ contract MinePoolsV2 is
 
             totalStakingLPDays -= _days;
 
-            _stakeLPData.totalStakingLP -= _sumAmountLP;
+            _stakeLPData.totalStaking -= _sumAmountLP;
 
             stakingLPAmountsOfPool[_poolNumber] -= _sumAmountLP;
 
-            stakingLPAmountsOfAccount[_account] -= _sumAmountLP;
+            stakingLPAmounts[_account] -= _sumAmountLP;
 
-            stakingLPDaysOfAccount[_account] -= _days;
+            stakingLPDays[_account] -= _days;
         }
 
         // transfer LP
@@ -577,103 +590,85 @@ contract MinePoolsV2 is
         return true;
     }
 
-    // function stakingYGIO(
-    //     StakingYGIOParas calldata _paras,
-    //     bytes calldata _signature
-    // ) external whenNotPaused nonReentrant returns (bool) {
-    //     address _account = _msgSender();
+    function stakingYGIO(
+        StakingYGIOParas calldata _paras,
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
 
-    //     _checkStakeDays(_paras.stakeDays);
+        _checkStakeDays(_paras.stakeDays);
 
-    //     _verifyStakeYGIO(_account, _paras, _signature);
+        _verifyStakeYGIO(_account, _paras, _signature);
 
-    //     uint256 _balance = IERC20(YGIO).balanceOf(_account);
+        uint256 _balance = IERC20(YGIO).balanceOf(_account);
 
-    //     require(
-    //         _balance >= _paras.amountLP && _paras.amountLP > 0,
-    //         "YGIO: Insufficient Balance"
-    //     );
+        require(
+            _balance >= _paras.amount && _paras.amount > 0,
+            "YGIO: Insufficient Balance"
+        );
 
-    //     StakeYGIOAccountData storage _stakeYGIOData;
+        StakeYGIOData storage _stakeYGIOData = stakeYGIODatas[_account];
 
-    //     if (!_checkAccountInPool(_paras.poolNumber, _account)) {
-    //         if (poolsOfAccount[_account].length == 0) {
-    //             poolsOfAccount[_account] = [_paras.poolNumber];
-    //         } else {
-    //             poolsOfAccount[_account].push(_paras.poolNumber);
-    //         }
-    //     }
+        StakeYGIOType _stakeType;
 
-    //     StakeLPType _stakeType;
+        uint256 _stakeOrderId;
 
-    //     uint256 _stakeOrderId;
+        if (_paras.stakeDays == 0) {
+            _stakeType = StakeYGIOType.STAKING_NO_DEADLINE;
 
-    //     if (_paras.stakeDays == 0) {
-    //         _stakeType = StakeLPType.STAKING_NO_DEADLINE;
+            _stakeYGIOData.cash += _paras.amount;
+        } else {
+            _stakeType = StakeYGIOType.STAKING_HAS_DEADLINE;
 
-    //         _stakeLPAccount.cashLP += _paras.amountLP;
-    //     } else {
-    //         _stakeType = StakeLPType.STAKING_HAS_DEADLINE;
+            // stakingYGIOOrderId
+            _currentStakingYGIOOrderId.increment();
 
-    //         // stakingLPOrderId
-    //         _currentStakingLPOrderId.increment();
+            _stakeOrderId = _currentStakingYGIOOrderId.current();
 
-    //         _stakeOrderId = _currentStakingLPOrderId.current();
+            if (_stakeYGIOData.stakingOrderIds.length == 0) {
+                _stakeYGIOData.stakingOrderIds = [_stakeOrderId];
+            } else {
+                _stakeYGIOData.stakingOrderIds.push(_stakeOrderId);
 
-    //         if (_stakeLPAccount.stakingOrderIds.length == 0) {
-    //             _stakeLPAccount.stakingOrderIds = [_stakeOrderId];
-    //         } else {
-    //             _stakeLPAccount.stakingOrderIds.push(_stakeOrderId);
+                stakeYGIOOrderDatas[_stakeOrderId] = StakeYGIOOrderData({
+                    owner: _account,
+                    amount: _paras.amount,
+                    startTime: uint128(block.timestamp),
+                    endTime: uint128(
+                        block.timestamp + _paras.stakeDays * ONEDAY
+                    )
+                });
+            }
+        }
 
-    //             stakeLPDatas[_stakeOrderId] = StakeLPOrderData({
-    //                 owner: _account,
-    //                 poolNumber: _paras.poolNumber,
-    //                 amountLP: _paras.amountLP,
-    //                 startTime: uint128(block.timestamp),
-    //                 endTime: uint128(
-    //                     block.timestamp + _paras.stakeDays * ONEDAY
-    //                 )
-    //             });
-    //         }
-    //     }
+        unchecked {
+            totalStakingYGIO += _paras.amount;
 
-    //     unchecked {
-    //         totalStakingLP += _paras.amountLP;
+            totalStakingYGIODays += _paras.stakeDays;
 
-    //         totalStakingLPDays += _paras.stakeDays;
+            _stakeYGIOData.totalStaking += _paras.amount;
 
-    //         _stakeLPAccount.totalStakingLP += _paras.amountLP;
+            stakingYGIODays[_account] += _paras.stakeDays;
 
-    //         stakingLPAmountsOfPool[_paras.poolNumber] += _paras.amountLP;
+            ++callCount;
+        }
 
-    //         stakingLPAmountsOfAccount[_account] += _paras.amountLP;
+        // transfer YGIO
+        IERC20(YGIO).transferFrom(_account, address(this), _paras.amount);
 
-    //         stakingLPDaysOfAccount[_account] += _paras.stakeDays;
+        emit StakeYGIO(
+            _account,
+            _paras.amount,
+            block.timestamp,
+            block.timestamp + _paras.stakeDays * ONEDAY,
+            _stakeType,
+            _stakeOrderId,
+            callCount,
+            block.number
+        );
 
-    //         ++callCount;
-    //     }
-
-    //     // transfer LP
-    //     IPancakePair(LPTOKEN_YGIO_USDT).transferFrom(
-    //         _account,
-    //         address(this),
-    //         _paras.amountLP
-    //     );
-
-    //     emit StakeLP(
-    //         _paras.poolNumber,
-    //         _account,
-    //         _paras.amountLP,
-    //         block.timestamp,
-    //         block.timestamp + _paras.stakeDays * ONEDAY,
-    //         _stakeType,
-    //         _stakeOrderId,
-    //         callCount,
-    //         block.number
-    //     );
-
-    //     return true;
-    // }
+        return true;
+    }
 
     function _verifyInviter(
         address _invitee,
@@ -725,7 +720,7 @@ contract MinePoolsV2 is
 
         bytes memory data = abi.encode(
             _account,
-            _paras.amountLP,
+            _paras.amount,
             _paras.stakeDays,
             _paras.deadline
         );
@@ -793,9 +788,7 @@ contract MinePoolsV2 is
     ) internal view returns (bool) {
         StakeLPData memory _stakeLPData = stakeLPDatas[_poolNumber][_account];
 
-        if (
-            _stakeLPData.cashLP > 0 || _stakeLPData.stakingOrderIds.length > 0
-        ) {
+        if (_stakeLPData.cash > 0 || _stakeLPData.stakingOrderIds.length > 0) {
             return true;
         } else {
             return false;
