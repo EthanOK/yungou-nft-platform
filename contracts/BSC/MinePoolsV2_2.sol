@@ -384,13 +384,20 @@ contract MinePoolsV2 is
     function applyMineOwner(
         uint256 _poolNumber,
         uint256 _amount,
+        uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
         require(mineOwners[_poolNumber] == ZERO_ADDRESS, "Mine owner exists");
 
         address _poolOwner = _msgSender();
 
-        _checkConditions(_poolNumber, _poolOwner, _amount, _signature);
+        _checkConditions(
+            _poolNumber,
+            _poolOwner,
+            _amount,
+            _deadline,
+            _signature
+        );
 
         require(
             IERC20(LPTOKEN).balanceOf(_poolOwner) >= _amount,
@@ -420,11 +427,19 @@ contract MinePoolsV2 is
     function applyWithdrawLP(
         uint256 _poolNumber,
         uint256 _amount,
+        uint256 _deadline,
         bytes calldata _signature
     ) external onlyMineOwner(_poolNumber) returns (bool) {
         address _account = _msgSender();
 
-        bytes memory data = abi.encode(_poolNumber, _account, _amount);
+        require(block.timestamp < _deadline, "Signature expired");
+
+        bytes memory data = abi.encode(
+            _poolNumber,
+            _account,
+            _amount,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(data);
 
@@ -1099,13 +1114,21 @@ contract MinePoolsV2 is
         uint256 _poolNumber,
         address _account,
         uint256 _amount,
+        uint256 _deadline,
         bytes calldata _signature
     ) internal view {
         require(_poolNumber > 0, "Invalid PoolNumber");
 
         require(poolIdOfAccount[_account] == 0, "Invalid poolOwner");
 
-        bytes memory data = abi.encode(_poolNumber, _account, _amount);
+        require(block.timestamp < _deadline, "Signature expired");
+
+        bytes memory data = abi.encode(
+            _poolNumber,
+            _account,
+            _amount,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(data);
 
