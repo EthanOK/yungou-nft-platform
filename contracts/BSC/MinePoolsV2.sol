@@ -989,6 +989,7 @@ contract MinePoolsV2 is
             uint256 amount,
             uint256 deadline
         ) = abi.decode(_data, (uint256, address, address, uint256, uint256));
+
         require(block.timestamp < deadline, "Signature expired");
 
         require(!withdrawRewardOrderIds[orderId], "Invalid orderId");
@@ -1001,10 +1002,10 @@ contract MinePoolsV2 is
 
         withdrawRewardOrderIds[orderId] = true;
 
-        require(
-            IERC20(tokenAddress).balanceOf(address(this)) >= amount,
-            "ERC20 Insufficient"
-        );
+        uint256 _balance = IERC20(tokenAddress).balanceOf(address(this));
+
+        // Lock staked YGIO
+        require(amount <= _balance - totalStakingYGIO, "YGIO Insufficient");
 
         unchecked {
             totalAccumulatedWithdraws += amount;
