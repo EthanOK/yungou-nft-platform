@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract MinePoolsV2_ is
+contract MinePoolsV3 is
     Pausable,
     Ownable,
     YGIOStakingDomain,
@@ -28,14 +28,15 @@ contract MinePoolsV2_ is
     uint256 public constant ONEDAY = 1 days;
     bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
-    address public immutable YGIO;
-    address public immutable YGME;
-    address public immutable LPTOKEN;
+    // immutable
+    address public YGIO;
+    address public YGME;
+    address public LPTOKEN;
+
+    address public inviteeSigner;
 
     Counters.Counter private _currentStakingLPOrderId;
     Counters.Counter private _currentStakingYGIOOrderId;
-
-    address private inviteeSigner;
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
 
@@ -89,6 +90,20 @@ contract MinePoolsV2_ is
         } else {
             _unpause();
         }
+    }
+
+    function setTokensAddress(
+        address _ygio,
+        address _ygme,
+        address _lptoken
+    ) external onlyOwner {
+        YGIO = _ygio;
+        YGME = _ygme;
+        LPTOKEN = _lptoken;
+    }
+
+    function setSigner(address _signer) external onlyOwner {
+        inviteeSigner = _signer;
     }
 
     function getMineOwner(uint256 _poolNumber) external view returns (address) {
