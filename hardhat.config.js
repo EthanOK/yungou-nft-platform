@@ -25,36 +25,43 @@ module.exports = {
       url: process.env.PHALCON_FORK_RPC,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     mainnet: {
       url: process.env.ALCHEMY_MAINNET_URL,
       chainId: 1,
       accounts: [process.env.ygnftownerETHMAIN],
     },
+
     goerli: {
       url: process.env.ALCHEMY_GOERLI_URL,
       chainId: 5,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     bsc: {
       url: process.env.BSC_URL,
       chainId: 56,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     tbsc: {
       url: process.env.TBSC_URL,
       chainId: 97,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     mumbai: {
       url: process.env.MUMBAI_URL,
       chainId: 80001,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     sepolia: {
       url: process.env.ALCHEMY_SEPOLIA_URL,
       chainId: 11155111,
       accounts: [process.env.PRIVATE_KEY],
     },
+
     hardhat: {
       forking: {
         url: process.env.ALCHEMY_MAINNET_URL,
@@ -75,6 +82,7 @@ module.exports = {
       bsc: process.env.BSC_API_KEY,
       bscTestnet: process.env.BSC_API_KEY,
     },
+
     customChains: [
       {
         network: "phalcon",
