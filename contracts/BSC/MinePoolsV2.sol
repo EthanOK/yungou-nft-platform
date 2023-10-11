@@ -48,7 +48,7 @@ abstract contract YGIOStakingDomain {
         StakeYGIOType indexed stakeType,
         uint256 orderId,
         uint256 callCount,
-        uint256 indexed blockNumber
+        uint256 blockNumber
     );
 
     // total Staking YGIO
@@ -96,7 +96,7 @@ abstract contract YGMEStakingDomain {
         uint256 endTime,
         StakeYGMEType indexed stakeType,
         uint256 callCount,
-        uint256 indexed blockNumber
+        uint256 blockNumber
     );
 
     // total Staking YGME
@@ -152,7 +152,7 @@ abstract contract LPStakingDomain {
     }
 
     event StakeLP(
-        uint256 poolNumber,
+        uint256 indexed poolNumber,
         address indexed account,
         uint256 amount,
         uint256 startTime,
@@ -160,12 +160,20 @@ abstract contract LPStakingDomain {
         StakeLPType indexed stakeType,
         uint256 stakingOrderId,
         uint256 callCount,
-        uint256 indexed blockNumber
+        uint256 blockNumber
     );
 
     event NewPool(
         uint256 poolNumber,
         address mineOwner,
+        uint256 amount,
+        uint256 blockNumber
+    );
+
+    event WithdrawReward(
+        uint256 orderId,
+        address indexed tokenAddress,
+        address indexed account,
         uint256 amount,
         uint256 blockNumber
     );
@@ -203,6 +211,7 @@ contract MinePoolsV2 is
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
     uint256 public constant ONEDAY = 1 days;
+    bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
     address public immutable LPTOKEN_YGIO_USDT;
     address public immutable YGIO;
@@ -238,6 +247,15 @@ contract MinePoolsV2 is
 
     // poolId => (invitee =>  inviter)
     mapping(uint256 => mapping(address => address)) private inviters;
+
+    // withdrawRewardOrderId => bool
+    mapping(uint256 => bool) private withdrawRewardOrderIds;
+
+    // total Accumulated withdrawReward
+    uint256 private totalAccumulatedWithdraws;
+
+    // account => withdrawReward balance
+    mapping(address => uint256) private accumulatedWithdrawRewards;
 
     constructor(
         address _ygio,
@@ -958,6 +976,55 @@ contract MinePoolsV2 is
         return true;
     }
 
+    function withdrawReward(
+        bytes calldata _data,
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant returns (bool) {
+        require(_data.length > 0 && _signature.length > 0, "Invalid data");
+
+        (
+            uint256 orderId,
+            address tokenAddress,
+            address account,
+            uint256 amount,
+            uint256 deadline
+        ) = abi.decode(_data, (uint256, address, address, uint256, uint256));
+        require(block.timestamp < deadline, "Signature expired");
+
+        require(!withdrawRewardOrderIds[orderId], "Invalid orderId");
+
+        require(account == _msgSender(), "Invalid account");
+
+        bytes32 _hash = keccak256(_data);
+
+        _verifySignature(_hash, _signature);
+
+        withdrawRewardOrderIds[orderId] = true;
+
+        require(
+            IERC20(tokenAddress).balanceOf(address(this)) >= amount,
+            "ERC20 Insufficient"
+        );
+
+        unchecked {
+            totalAccumulatedWithdraws += amount;
+
+            accumulatedWithdrawRewards[account] += amount;
+        }
+
+        // transfer reward( contract--> account)
+        _transferLowCall(tokenAddress, account, amount);
+
+        emit WithdrawReward(
+            orderId,
+            tokenAddress,
+            account,
+            amount,
+            block.number
+        );
+        return true;
+    }
+
     function _verifyInviter(
         address _invitee,
         StakingLPParas calldata _paras,
@@ -1013,9 +1080,9 @@ contract MinePoolsV2 is
             _paras.deadline
         );
 
-        bytes32 hash = keccak256(data);
+        bytes32 _hash = keccak256(data);
 
-        _verifySignature(hash, _signature);
+        _verifySignature(_hash, _signature);
     }
 
     function _verifyStakeYGME(
@@ -1032,9 +1099,9 @@ contract MinePoolsV2 is
             _paras.deadline
         );
 
-        bytes32 hash = keccak256(data);
+        bytes32 _hash = keccak256(data);
 
-        _verifySignature(hash, _signature);
+        _verifySignature(_hash, _signature);
     }
 
     modifier checkPoolNumber(uint256 _poolNumber, bytes calldata _signature) {
@@ -1044,20 +1111,20 @@ contract MinePoolsV2 is
 
         bytes memory data = abi.encode(_poolNumber, poolOwner);
 
-        bytes32 hash = keccak256(data);
+        bytes32 _hash = keccak256(data);
 
-        _verifySignature(hash, _signature);
+        _verifySignature(_hash, _signature);
 
         _;
     }
 
     function _verifySignature(
-        bytes32 hash,
-        bytes calldata signature
+        bytes32 _hash,
+        bytes calldata _signature
     ) internal view {
-        hash = hash.toEthSignedMessageHash();
+        _hash = _hash.toEthSignedMessageHash();
 
-        address signer = hash.recover(signature);
+        address signer = _hash.recover(_signature);
 
         require(signer == inviteeSigner, "Invalid signature");
     }
@@ -1109,6 +1176,20 @@ contract MinePoolsV2 is
                 _stakeDays == stakingDays[2] ||
                 _stakeDays == stakingDays[3],
             "Invalid stakeDays"
+        );
+    }
+
+    function _transferLowCall(
+        address target,
+        address to,
+        uint256 value
+    ) internal {
+        (bool success, bytes memory data) = target.call(
+            abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "Low-level call failed"
         );
     }
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -15,7 +16,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;
 
-        mint(_msgSender(), 10_000 * 1e18);
+        _mint(_msgSender(), 10_000 * 1e18);
     }
 
     function setPause() external onlyOwner {
@@ -42,26 +43,35 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         slippageAccount = _slippageAccount;
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
+    }
+
+    function burn(uint256 value) external {
+        _burn(_msgSender(), value);
+    }
+
+    function burnFrom(address account, uint256 value) external {
+        _spendAllowance(account, _msgSender(), value);
+        _burn(account, value);
     }
 
     function transfer(
         address to,
         uint256 amount
     ) public virtual override returns (bool) {
-        address owner = _msgSender();
+        address _account = _msgSender();
 
         // swap(pool => user) or removeLiquidity
-        if (isTransactionPools[owner] == 0) {
-            _transfer(owner, to, amount);
+        if (isTransactionPools[_account] == 0) {
+            _transfer(_account, to, amount);
         } else {
-            uint256 fees = (amount * isTransactionPools[owner]) / BASE_10000;
+            uint256 fees = (amount * isTransactionPools[_account]) / BASE_10000;
 
-            _transfer(owner, slippageAccount, fees);
+            _transfer(_account, slippageAccount, fees);
 
             // Deduct slippage
-            _transfer(owner, to, amount - fees);
+            _transfer(_account, to, amount - fees);
         }
         return true;
     }
@@ -72,12 +82,12 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     ) external returns (bool) {
         require(tos.length == amounts.length, "Invalid Paras");
 
-        address owner = _msgSender();
+        address _account = _msgSender();
 
         uint256 count = tos.length;
 
         for (uint i = 0; i < count; ++i) {
-            _transfer(owner, tos[i], amounts[i]);
+            _transfer(_account, tos[i], amounts[i]);
         }
 
         return true;
@@ -91,7 +101,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         address spender = _msgSender();
         _spendAllowance(from, spender, amount);
 
-        //  addLiquidity or swap(user => pool)
+        // addLiquidity or swap(user => pool)
         if (isTransactionPools[to] == 0) {
             _transfer(from, to, amount);
         } else {
