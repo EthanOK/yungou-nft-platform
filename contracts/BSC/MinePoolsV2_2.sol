@@ -430,11 +430,13 @@ contract MinePoolsV2 is
 
         _verifySignature(_hash, _signature);
 
-        balanceMineOwners[_account] -= _amount;
+        {
+            balanceMineOwners[_account] -= _amount;
 
-        totalStakingLP -= _amount;
+            totalStakingLP -= _amount;
 
-        stakingLPAmountsOfPool[_poolNumber] -= _amount;
+            stakingLPAmountsOfPool[_poolNumber] -= _amount;
+        }
 
         // transfer LP (contract --> account)
         IERC20(LPTOKEN).transfer(_account, _amount);
