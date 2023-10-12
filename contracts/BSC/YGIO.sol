@@ -13,10 +13,11 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     // Base 10000
     mapping(address => uint256) private isTransactionPools;
 
+    // white Lists
+    mapping(address => bool) whiteLists;
+
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;
-
-        _mint(_msgSender(), 10_000 * 1e18);
     }
 
     function setPause() external onlyOwner {
@@ -25,6 +26,14 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         } else {
             _unpause();
         }
+    }
+
+    function setWhiteList(address _account) external onlyOwner {
+        whiteLists[_account] = !whiteLists[_account];
+    }
+
+    function getWhiteList(address _account) external view returns (bool) {
+        return whiteLists[_account];
     }
 
     function setTxPoolRate(address txPool, uint256 feeRate) external onlyOwner {
@@ -43,12 +52,8 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         slippageAccount = _slippageAccount;
     }
 
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) external onlyOwnerOrWhiteList {
         _mint(to, amount);
-    }
-
-    function burn(uint256 value) external {
-        _burn(_msgSender(), value);
     }
 
     function burnFrom(address account, uint256 value) external {
@@ -122,5 +127,12 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
         uint256 amount
     ) internal override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
+    }
+
+    modifier onlyOwnerOrWhiteList() {
+        address _caller = _msgSender();
+
+        require(owner() == _caller || whiteLists[_caller], "No permission");
+        _;
     }
 }

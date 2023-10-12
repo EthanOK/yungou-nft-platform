@@ -290,7 +290,13 @@ contract MinePoolsV3 is
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
-    ) external onlyMineOwner(_poolNumber) returns (bool) {
+    )
+        external
+        whenNotPaused
+        nonReentrant
+        onlyMineOwner(_poolNumber)
+        returns (bool)
+    {
         address _account = _msgSender();
 
         require(block.timestamp < _deadline, "Signature expired");
