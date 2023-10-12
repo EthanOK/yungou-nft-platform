@@ -34,7 +34,7 @@ contract MinePoolsV3 is
     address public YGME;
     address public LPTOKEN;
 
-    address public systemSigner;
+    address private systemSigner;
 
     Counters.Counter private _currentStakingLPOrderId;
     Counters.Counter private _currentStakingYGIOOrderId;
