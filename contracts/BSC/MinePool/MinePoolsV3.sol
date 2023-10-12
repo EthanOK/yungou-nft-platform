@@ -46,6 +46,8 @@ contract MinePoolsV3 is
 
     uint256 private callCount;
 
+    uint256[] private poolIds;
+
     // poolId => mineOwner
     mapping(uint256 => address) mineOwners;
 
@@ -121,6 +123,10 @@ contract MinePoolsV3 is
 
     function getSigner() external view onlyOwner returns (address) {
         return systemSigner;
+    }
+
+    function getPoolIds() external view onlyOwner returns (uint256[] memory) {
+        return poolIds;
     }
 
     function getTotalStakeLPAll() external view returns (uint256) {
@@ -261,6 +267,8 @@ contract MinePoolsV3 is
         balanceMineOwners[_poolOwner] = _amount;
 
         poolIdOfAccount[_poolOwner] = _poolNumber;
+
+        poolIds.push(_poolNumber);
 
         unchecked {
             totalStakingLP += _amount;
@@ -886,27 +894,33 @@ contract MinePoolsV3 is
         require(block.timestamp < _paras.deadline, "Signature has expired");
 
         require(
-            mineOwners[_paras.poolNumber] != ZERO_ADDRESS,
+            mineOwners[_paras.poolNumber] != ZERO_ADDRESS &&
+                _paras.poolNumber > 0,
             "Invalid poolNumber"
         );
 
-        if (_invitee == mineOwners[_paras.poolNumber]) {
-            // _account is mineOwner
-            return;
-        } else if (inviters[_invitee] != ZERO_ADDRESS) {
-            // _account already have a superior
+        if (poolIdOfAccount[_invitee] > 0) {
+            // _account is Old User
+
+            require(
+                poolIdOfAccount[_invitee] == _paras.poolNumber,
+                "Error poolNumber"
+            );
+
             return;
         } else {
             // _account is New User
+
+            // check superior's poolId, superior is old user
+            require(
+                poolIdOfAccount[_paras.inviter] == _paras.poolNumber,
+                "Invalid poolId"
+            );
+
             if (_paras.inviter != mineOwners[_paras.poolNumber]) {
                 // _account's superior is not mineOwner
 
-                require(
-                    inviters[_paras.inviter] != ZERO_ADDRESS,
-                    "Invalid inviter"
-                );
-
-                // check superior stakeLPAmount
+                // check superior's stakeLPAmount
                 require(
                     stakeLPDatas[_paras.inviter].totalStaking > 0,
                     "Insufficient StakedLP Of inviter"
@@ -976,6 +990,10 @@ contract MinePoolsV3 is
         bytes calldata _signature
     ) internal view {
         require(_poolNumber > 0, "Invalid PoolNumber");
+
+        for (uint i = 0; i < poolIds.length; ++i) {
+            require(poolIds[i] != _poolNumber, "poolNumber existed");
+        }
 
         require(poolIdOfAccount[_account] == 0, "Invalid poolOwner");
 
