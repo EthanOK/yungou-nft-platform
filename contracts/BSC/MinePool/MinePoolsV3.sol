@@ -13,12 +13,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract MinePoolsV3 is
-    Pausable,
-    Ownable,
     YGIOStakingDomain,
     YGMEStakingDomain,
     LPStakingDomain,
-    ReentrancyGuard
+    ReentrancyGuard,
+    Pausable,
+    Ownable
 {
     using Counters for Counters.Counter;
     using ECDSA for bytes32;
