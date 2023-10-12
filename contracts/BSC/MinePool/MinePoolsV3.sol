@@ -331,7 +331,7 @@ contract MinePoolsV3 is
 
         _checkStakeDays(_paras.stakeDays);
 
-        _verifyInviter(_account, _paras, _signature);
+        _verifyStakeLP(_account, _paras, _signature);
 
         uint256 _balance = IERC20(LPTOKEN).balanceOf(_account);
 
@@ -888,7 +888,7 @@ contract MinePoolsV3 is
         return true;
     }
 
-    function _verifyInviter(
+    function _verifyStakeLP(
         address _invitee,
         StakingLPParas calldata _paras,
         bytes calldata _signature
