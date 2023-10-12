@@ -17,7 +17,7 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         uint256 blockNumber
     );
 
-    event LockYGIO(
+    event BurnYGIO(
         uint256 lockId,
         address indexed account,
         uint256 amount,
@@ -31,11 +31,11 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     // convertId => bool
     mapping(uint256 => bool) convertStates;
 
-    uint256 private totalLockYGIO;
+    uint256 private totalBurnYGIO;
 
     uint256 private totalConvertYGIO;
 
-    uint256 public lockId;
+    uint256 public burnId;
 
     constructor(address _ygio, address _signer) {
         YGIO = _ygio;
@@ -58,12 +58,12 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         return totalConvertYGIO;
     }
 
-    function getTotalLockYGIO() external view returns (uint256) {
-        return totalLockYGIO;
+    function getTotalBurnYGIO() external view returns (uint256) {
+        return totalBurnYGIO;
     }
 
-    // Must approve
-    function lockYGIO(
+    // It’s not really burn, it’s just locked in the contract
+    function burnYGIO(
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
@@ -78,14 +78,14 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        totalLockYGIO += _amount;
+        totalBurnYGIO += _amount;
 
-        ++lockId;
+        ++burnId;
 
         // transfer (account --> Contract)
         IERC20(YGIO).transferFrom(_account, address(this), _amount);
 
-        emit LockYGIO(lockId, _account, _amount, block.number);
+        emit BurnYGIO(burnId, _account, _amount, block.number);
 
         return true;
     }

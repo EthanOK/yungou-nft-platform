@@ -29,16 +29,16 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         uint256 blockNumber
     );
 
-    address signer;
+    address private signer;
 
-    address YGIO;
+    address public YGIO;
 
     // convertId => bool
     mapping(uint256 => bool) convertStates;
 
-    uint256 totalConvertYGIO;
+    uint256 private totalConvertYGIO;
 
-    uint256 totalBurnYGIO;
+    uint256 private totalBurnYGIO;
 
     uint256 public burnId;
 
@@ -67,6 +67,7 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         return totalBurnYGIO;
     }
 
+    // Mint YGIO
     function convertYGIO(
         uint256 _convertId,
         address _account,
@@ -104,7 +105,7 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         return true;
     }
 
-    // Must approve
+    // Burn YGIO
     function burnYGIO(
         uint256 _amount,
         uint256 _deadline,
