@@ -25,15 +25,16 @@ contract MinePoolsV3 is
 
     address public constant ZERO_ADDRESS = address(0);
     uint256 public constant REWARDRATE_BASE = 10_000;
-    uint256 public constant ONEDAY = 1 days;
+    // TODO:uint256 public constant ONEDAY = 1 days;
+    uint256 public ONEDAY = 1;
     bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
-    // immutable
+    // TODO:immutable
     address public YGIO;
     address public YGME;
     address public LPTOKEN;
 
-    address public inviteeSigner;
+    address public systemSigner;
 
     Counters.Counter private _currentStakingLPOrderId;
     Counters.Counter private _currentStakingYGIOOrderId;
@@ -79,7 +80,7 @@ contract MinePoolsV3 is
         YGME = _ygme;
         LPTOKEN = _lptoken;
 
-        inviteeSigner = _inviteeSigner;
+        systemSigner = _inviteeSigner;
 
         stakingDays = [0, 100, 300, 0];
     }
@@ -102,12 +103,24 @@ contract MinePoolsV3 is
         LPTOKEN = _lptoken;
     }
 
+    function setStakingDays(
+        uint64[4] calldata _stakingDays,
+        uint256 _second
+    ) external onlyOwner {
+        stakingDays = _stakingDays;
+        ONEDAY = _second;
+    }
+
     function setSigner(address _signer) external onlyOwner {
-        inviteeSigner = _signer;
+        systemSigner = _signer;
     }
 
     function getMineOwner(uint256 _poolNumber) external view returns (address) {
         return mineOwners[_poolNumber];
+    }
+
+    function getSigner() external view onlyOwner returns (address) {
+        return systemSigner;
     }
 
     function getTotalStakeLPAll() external view returns (uint256) {
@@ -974,7 +987,7 @@ contract MinePoolsV3 is
 
         address signer = _hash.recover(_signature);
 
-        require(signer == inviteeSigner, "Invalid signature");
+        require(signer == systemSigner, "Invalid signature");
     }
 
     function _queryInviters(
