@@ -64,11 +64,12 @@ contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
 
     function convertYGIO(
         uint256 _convertId,
+        address _account,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        address _account = _msgSender();
+        // address _account = _msgSender();
 
         require(block.timestamp < _deadline, "Signature expired");
 
