@@ -41,7 +41,7 @@ contract MinePoolsV3 is
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
 
-    // stakingDays 0 100 300
+    // stakingDays 0 100 300 0
     uint64[4] private stakingDays;
 
     uint256 private callCount;
@@ -245,11 +245,13 @@ contract MinePoolsV3 is
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        require(mineOwners[_poolNumber] == ZERO_ADDRESS, "Mine owner exists");
+        require(_poolNumber > 0, "Invalid PoolNumber");
+
+        require(mineOwners[_poolNumber] == ZERO_ADDRESS, "poolNumber exists");
 
         address _poolOwner = _msgSender();
 
-        _checkConditions(
+        _verifyMinerOwner(
             _poolNumber,
             _poolOwner,
             _amount,
@@ -982,19 +984,13 @@ contract MinePoolsV3 is
         _verifySignature(_hash, _signature);
     }
 
-    function _checkConditions(
+    function _verifyMinerOwner(
         uint256 _poolNumber,
         address _account,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) internal view {
-        require(_poolNumber > 0, "Invalid PoolNumber");
-
-        for (uint i = 0; i < poolIds.length; ++i) {
-            require(poolIds[i] != _poolNumber, "poolNumber existed");
-        }
-
         require(poolIdOfAccount[_account] == 0, "Invalid poolOwner");
 
         require(block.timestamp < _deadline, "Signature expired");
