@@ -20,14 +20,13 @@ contract MinePoolsV3 is
     Pausable,
     Ownable
 {
-    using Counters for Counters.Counter;
     using ECDSA for bytes32;
+    using Counters for Counters.Counter;
 
+    bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
     address public constant ZERO_ADDRESS = address(0);
-    uint256 public constant REWARDRATE_BASE = 10_000;
     // TODO:uint256 public constant ONEDAY = 1 days;
     uint256 public ONEDAY = 1;
-    bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
     // TODO:immutable
     address public YGIO;
