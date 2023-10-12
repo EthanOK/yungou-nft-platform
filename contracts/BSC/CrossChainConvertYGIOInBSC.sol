@@ -12,9 +12,7 @@ interface IYGIO {
     function burnFrom(address account, uint256 value) external;
 }
 
-contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
-    bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
-
+contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
     event ConvertYGIO(
@@ -25,6 +23,7 @@ contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
     );
 
     event BurnYGIO(
+        uint256 burnId,
         address indexed account,
         uint256 amount,
         uint256 blockNumber
@@ -41,6 +40,8 @@ contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
 
     uint256 totalBurnYGIO;
 
+    uint256 public burnId;
+
     constructor(address _ygio, address _signer) {
         YGIO = _ygio;
         signer = _signer;
@@ -52,6 +53,10 @@ contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
         } else {
             _unpause();
         }
+    }
+
+    function setSigner(address _signer) external onlyOwner {
+        signer = _signer;
     }
 
     function getTotalConvertYGIO() external view returns (uint256) {
@@ -117,10 +122,12 @@ contract CrossChainConvertYGIO is Ownable, Pausable, ReentrancyGuard {
 
         totalBurnYGIO += _amount;
 
+        ++burnId;
+
         // burn YGIO
         IYGIO(YGIO).burnFrom(_account, _amount);
 
-        emit BurnYGIO(_account, _amount, block.number);
+        emit BurnYGIO(burnId, _account, _amount, block.number);
 
         return true;
     }
