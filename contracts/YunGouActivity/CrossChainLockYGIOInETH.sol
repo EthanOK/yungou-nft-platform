@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
-    event ConvertYGIO(
+    event MintYGIO(
         address indexed account,
         uint256 amount,
         uint256 convertId,
@@ -28,12 +28,12 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
     address YGIO;
 
-    // convertId => bool
-    mapping(uint256 => bool) convertStates;
+    // mintId => bool
+    mapping(uint256 => bool) mintIdStates;
 
     uint256 private totalBurnYGIO;
 
-    uint256 private totalConvertYGIO;
+    uint256 private totalMintYGIO;
 
     uint256 public burnId;
 
@@ -54,15 +54,15 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         signer = _signer;
     }
 
-    function getTotalConvertYGIO() external view returns (uint256) {
-        return totalConvertYGIO;
+    function getTotalMintYGIO() external view returns (uint256) {
+        return totalMintYGIO;
     }
 
     function getTotalBurnYGIO() external view returns (uint256) {
         return totalBurnYGIO;
     }
 
-    // It’s not really burn, it’s just locked in the contract
+    // It’s not really burn, It just locks the token in the contract.
     function burnYGIO(
         uint256 _amount,
         uint256 _deadline,
@@ -90,7 +90,8 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         return true;
     }
 
-    function convertYGIO(
+    // It's not a real mint, it just unlocks the tokens in the contract.
+    function mintYGIO(
         uint256 _convertId,
         address _account,
         uint256 _amount,
@@ -101,7 +102,7 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         require(block.timestamp < _deadline, "Signature expired");
 
-        require(!convertStates[_convertId], "Invalid convertId");
+        require(!mintIdStates[_convertId], "Invalid convertId");
 
         bytes memory _data = abi.encode(
             _convertId,
@@ -115,14 +116,14 @@ contract CrossChainLockYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        convertStates[_convertId] = true;
+        mintIdStates[_convertId] = true;
 
-        totalConvertYGIO += _amount;
+        totalMintYGIO += _amount;
 
         // transfer (Contract --> account)
         IERC20(YGIO).transfer(_account, _amount);
 
-        emit ConvertYGIO(_account, _amount, _convertId, block.number);
+        emit MintYGIO(_account, _amount, _convertId, block.number);
 
         return true;
     }

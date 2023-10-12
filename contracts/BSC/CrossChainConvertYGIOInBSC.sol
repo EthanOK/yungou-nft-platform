@@ -15,10 +15,10 @@ interface IYGIO {
 contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
-    event ConvertYGIO(
+    event MintYGIO(
         address indexed account,
         uint256 amount,
-        uint256 convertId,
+        uint256 mintId,
         uint256 blockNumber
     );
 
@@ -33,10 +33,10 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
     address public YGIO;
 
-    // convertId => bool
-    mapping(uint256 => bool) convertStates;
+    // mintId => bool
+    mapping(uint256 => bool) mintIdStates;
 
-    uint256 private totalConvertYGIO;
+    uint256 private totalMintYGIO;
 
     uint256 private totalBurnYGIO;
 
@@ -59,8 +59,8 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         signer = _signer;
     }
 
-    function getTotalConvertYGIO() external view returns (uint256) {
-        return totalConvertYGIO;
+    function getTotalMintYGIO() external view returns (uint256) {
+        return totalMintYGIO;
     }
 
     function getTotalBurnYGIO() external view returns (uint256) {
@@ -68,8 +68,8 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     }
 
     // Mint YGIO
-    function convertYGIO(
-        uint256 _convertId,
+    function mintYGIO(
+        uint256 _mintId,
         address _account,
         uint256 _amount,
         uint256 _deadline,
@@ -79,10 +79,10 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         require(block.timestamp < _deadline, "Signature expired");
 
-        require(!convertStates[_convertId], "Invalid convertId");
+        require(!mintIdStates[_mintId], "Invalid convertId");
 
         bytes memory _data = abi.encode(
-            _convertId,
+            _mintId,
             YGIO,
             _account,
             _amount,
@@ -93,14 +93,14 @@ contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        convertStates[_convertId] = true;
+        mintIdStates[_mintId] = true;
 
-        totalConvertYGIO += _amount;
+        totalMintYGIO += _amount;
 
         // mint YGIO
         IYGIO(YGIO).mint(_account, _amount);
 
-        emit ConvertYGIO(_account, _amount, _convertId, block.number);
+        emit MintYGIO(_account, _amount, _mintId, block.number);
 
         return true;
     }
