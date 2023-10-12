@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract YGIO_B is Pausable, Ownable, ERC20 {
+contract YGIO_BSC is Pausable, Ownable, ERC20 {
     uint256 public constant BASE_10000 = 10_000;
 
     address private slippageAccount;
@@ -14,7 +14,7 @@ contract YGIO_B is Pausable, Ownable, ERC20 {
     mapping(address => uint256) private isTransactionPools;
 
     // white Lists
-    mapping(address => bool) whiteLists;
+    mapping(address => bool) private whiteLists;
 
     constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
         slippageAccount = _slippageAccount;

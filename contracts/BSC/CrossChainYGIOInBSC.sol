@@ -12,7 +12,7 @@ interface IYGIO {
     function burnFrom(address account, uint256 value) external;
 }
 
-contract CrossChainConvertYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
+contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
     event MintYGIO(
