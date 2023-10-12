@@ -890,15 +890,29 @@ contract MinePoolsV3 is
             "Invalid poolNumber"
         );
 
-        if (inviters[_invitee] == ZERO_ADDRESS) {
+        if (_invitee == mineOwners[_paras.poolNumber]) {
+            // _account is mineOwner
+            return;
+        } else if (inviters[_invitee] != ZERO_ADDRESS) {
+            // _account already have a superior
+            return;
+        } else {
+            // _account is New User
             if (_paras.inviter != mineOwners[_paras.poolNumber]) {
-                // Is the inviter valid?
+                // _account's superior is not mineOwner
+
                 require(
                     inviters[_paras.inviter] != ZERO_ADDRESS,
                     "Invalid inviter"
                 );
+
+                // check superior stakeLPAmount
+                require(
+                    stakeLPDatas[_paras.inviter].totalStaking > 0,
+                    "Insufficient StakedLP Of inviter"
+                );
             }
-            // Whether the invitee has been invited?
+
             bytes memory data = abi.encode(
                 _paras.poolNumber,
                 _invitee,
