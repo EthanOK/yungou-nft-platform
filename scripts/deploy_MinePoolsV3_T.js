@@ -12,7 +12,7 @@ async function main() {
 
   await minePoolsV3.deployed();
 
-  console.log(`YunGouMarketRegistry deployed to ${minePoolsV3.address}`);
+  console.log(`MinePoolsV3 deployed to ${minePoolsV3.address}`);
 }
 
 main().catch((error) => {
