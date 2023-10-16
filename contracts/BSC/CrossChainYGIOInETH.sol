@@ -13,7 +13,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     event MintYGIO(
         address indexed account,
         uint256 amount,
-        uint256 convertId,
+        uint256 mintId,
         uint256 blockNumber
     );
 
@@ -92,7 +92,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
     // It's not a real mint, it just unlocks the tokens in the contract.
     function mintYGIO(
-        uint256 _convertId,
+        uint256 _mintId,
         address _account,
         uint256 _amount,
         uint256 _deadline,
@@ -102,10 +102,10 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         require(block.timestamp < _deadline, "Signature expired");
 
-        require(!mintIdStates[_convertId], "Invalid convertId");
+        require(!mintIdStates[_mintId], "Invalid convertId");
 
         bytes memory _data = abi.encode(
-            _convertId,
+            _mintId,
             YGIO,
             _account,
             _amount,
@@ -116,14 +116,14 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        mintIdStates[_convertId] = true;
+        mintIdStates[_mintId] = true;
 
         totalMintYGIO += _amount;
 
         // transfer (Contract --> account)
         IERC20(YGIO).transfer(_account, _amount);
 
-        emit MintYGIO(_account, _amount, _convertId, block.number);
+        emit MintYGIO(_account, _amount, _mintId, block.number);
 
         return true;
     }
