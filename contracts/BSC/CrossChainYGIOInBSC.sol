@@ -67,6 +67,10 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         return totalBurnYGIO;
     }
 
+    function getMintState(uint256 _mintId) external view returns (bool) {
+        return mintIdStates[_mintId];
+    }
+
     // Mint YGIO
     function mintYGIO(
         uint256 _mintId,

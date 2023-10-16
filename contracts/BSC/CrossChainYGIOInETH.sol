@@ -62,6 +62,10 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         return totalBurnYGIO;
     }
 
+    function getMintState(uint256 _mintId) external view returns (bool) {
+        return mintIdStates[_mintId];
+    }
+
     // It’s not really burn, It just locks the token in the contract.
     function burnYGIO(
         uint256 _amount,
