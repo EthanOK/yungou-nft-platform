@@ -112,6 +112,10 @@ contract MinePoolsV3 is
         ONEDAY = _second;
     }
 
+    function getStakingDays() external view returns (uint64[4] memory) {
+        return stakingDays;
+    }
+
     function setSigner(address _signer) external onlyOwner {
         systemSigner = _signer;
     }
