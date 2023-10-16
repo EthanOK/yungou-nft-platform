@@ -3,9 +3,9 @@ const hre = require("hardhat");
 async function main() {
   const MinePoolsV3 = await hre.ethers.getContractFactory("MinePoolsV3");
 
-  const ygio = "0xb06DcE9ae21c3b9163cD933E40c9EE563366b783";
+  const ygio = "0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f";
   const ygme = "0xDb6c494BE6Aae80cc042f9CDA24Ce573aD163A46";
-  const lp = "0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90";
+  const lp = "0x21DEf0EeF658237579f40603164Eb86c3453ad97";
   const signer = "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2";
 
   const minePoolsV3 = await MinePoolsV3.deploy(ygio, ygme, lp, signer);
@@ -22,4 +22,4 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_MinePoolsV3_T.js --network tbsc
 
-// npx hardhat verify --network tbsc 0x786324128223Ff37EA0A66d8Ce7ED16F5b357d2b 0xb06DcE9ae21c3b9163cD933E40c9EE563366b783 0xDb6c494BE6Aae80cc042f9CDA24Ce573aD163A46 0x54D7fb29e79907f41B1418562E3a4FeDc49Bec90 0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2
+// npx hardhat verify --network tbsc 0x786324128223Ff37EA0A66d8Ce7ED16F5b357d2b 0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f 0xDb6c494BE6Aae80cc042f9CDA24Ce573aD163A46 0x21DEf0EeF658237579f40603164Eb86c3453ad97 0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2
