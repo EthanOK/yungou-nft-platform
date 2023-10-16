@@ -34,7 +34,7 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     address public YGIO;
 
     // mintId => bool
-    mapping(uint256 => bool) mintIdStates;
+    mapping(uint256 => bool) private mintIdStates;
 
     uint256 private totalMintYGIO;
 

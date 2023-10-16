@@ -48,7 +48,7 @@ contract MinePoolsV3 is
     uint256[] private poolIds;
 
     // poolId => mineOwner
-    mapping(uint256 => address) mineOwners;
+    mapping(uint256 => address) private mineOwners;
 
     // mineOwner => lp balance
     mapping(address => uint256) private balanceMineOwners;
@@ -65,11 +65,11 @@ contract MinePoolsV3 is
     // withdrawRewardOrderId => bool
     mapping(uint256 => bool) private withdrawRewardOrderIds;
 
-    // total Accumulated withdrawReward
-    uint256 private totalAccumulatedWithdraws;
-
     // account => withdrawReward balance
     mapping(address => uint256) private accumulatedWithdrawRewards;
+
+    // total Accumulated withdrawReward
+    uint256 private totalAccumulatedWithdraws;
 
     constructor(
         address _ygio,

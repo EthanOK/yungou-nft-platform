@@ -29,7 +29,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     address YGIO;
 
     // mintId => bool
-    mapping(uint256 => bool) mintIdStates;
+    mapping(uint256 => bool) private mintIdStates;
 
     uint256 private totalBurnYGIO;
 
