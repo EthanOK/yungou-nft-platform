@@ -62,8 +62,8 @@ contract MinePoolsV3 is
     // invitee => inviter
     mapping(address => address) private inviters;
 
-    // withdrawRewardOrderId => bool
-    mapping(uint256 => bool) private withdrawRewardOrderIds;
+    // withdrawOrderIds => bool
+    mapping(uint256 => bool) private withdrawOrderIds;
 
     // account => withdrawReward balance
     mapping(address => uint256) private accumulatedWithdrawRewards;
@@ -120,10 +120,8 @@ contract MinePoolsV3 is
         return stakingDays;
     }
 
-    function getWithdrawRewardState(
-        uint256 _orderId
-    ) external view returns (bool) {
-        return withdrawRewardOrderIds[_orderId];
+    function getOrderState(uint256 _orderId) external view returns (bool) {
+        return withdrawOrderIds[_orderId];
     }
 
     function getMineOwner(uint256 _poolNumber) external view returns (address) {
@@ -296,6 +294,7 @@ contract MinePoolsV3 is
     }
 
     function applyWithdrawLP(
+        uint256 _orderId,
         uint256 _poolNumber,
         uint256 _amount,
         uint256 _deadline,
@@ -307,11 +306,14 @@ contract MinePoolsV3 is
         onlyMineOwner(_poolNumber)
         returns (bool)
     {
+        require(!withdrawOrderIds[_orderId], "Invalid orderId");
+
         address _account = _msgSender();
 
         require(block.timestamp < _deadline, "Signature expired");
 
         bytes memory data = abi.encode(
+            _orderId,
             _poolNumber,
             _account,
             _amount,
@@ -329,6 +331,8 @@ contract MinePoolsV3 is
 
             stakingLPAmountsOfPool[_poolNumber] -= _amount;
         }
+
+        withdrawOrderIds[_orderId] = true;
 
         // transfer LP (contract --> account)
         IERC20(LPTOKEN).transfer(_account, _amount);
@@ -423,10 +427,13 @@ contract MinePoolsV3 is
     }
 
     function unStakeLP(
+        uint256 _orderId,
         uint256 _poolNumber,
         uint256 _amountCash,
         uint256[] calldata _stakingOrderIds
     ) external whenNotPaused nonReentrant returns (bool) {
+        require(!withdrawOrderIds[_orderId], "Invalid orderId");
+
         require(
             (_amountCash > 0 && _stakingOrderIds.length == 0) ||
                 (_amountCash == 0 && _stakingOrderIds.length > 0),
@@ -526,6 +533,8 @@ contract MinePoolsV3 is
             stakingLPDays[_account] -= _days;
         }
 
+        withdrawOrderIds[_orderId] = true;
+
         // transfer LP (contract --> account)
         IERC20(LPTOKEN).transfer(_account, _sumAmountLP);
 
@@ -613,9 +622,12 @@ contract MinePoolsV3 is
     }
 
     function unStakeYGIO(
+        uint256 _orderId,
         uint256 _amountCash,
         uint256[] calldata _stakingOrderIds
     ) external whenNotPaused nonReentrant returns (bool) {
+        require(!withdrawOrderIds[_orderId], "Invalid orderId");
+
         require(
             (_amountCash > 0 && _stakingOrderIds.length == 0) ||
                 (_amountCash == 0 && _stakingOrderIds.length > 0),
@@ -708,6 +720,8 @@ contract MinePoolsV3 is
 
             stakingYGIODays[_account] -= _days;
         }
+
+        withdrawOrderIds[_orderId] = true;
 
         // transfer YGIO
         IERC20(YGIO).transfer(_account, _sumAmountYGIO);
@@ -869,7 +883,7 @@ contract MinePoolsV3 is
 
         require(block.timestamp < deadline, "Signature expired");
 
-        require(!withdrawRewardOrderIds[orderId], "Invalid orderId");
+        require(!withdrawOrderIds[orderId], "Invalid orderId");
 
         require(account == _msgSender(), "Invalid account");
 
@@ -877,7 +891,7 @@ contract MinePoolsV3 is
 
         _verifySignature(_hash, _signature);
 
-        withdrawRewardOrderIds[orderId] = true;
+        withdrawOrderIds[orderId] = true;
 
         uint256 _balance = IERC20(tokenAddress).balanceOf(address(this));
 
