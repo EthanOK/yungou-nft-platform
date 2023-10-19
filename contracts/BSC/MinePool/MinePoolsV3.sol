@@ -256,9 +256,9 @@ contract MinePoolsV3 is
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        require(_poolId > 0, "Invalid PoolNumber");
+        require(_poolId > 0, "Invalid poolId");
 
-        require(mineOwners[_poolId] == ZERO_ADDRESS, "poolNumber exists");
+        require(mineOwners[_poolId] == ZERO_ADDRESS, "poolId exists");
 
         address _poolOwner = _msgSender();
 
@@ -293,30 +293,21 @@ contract MinePoolsV3 is
 
     function applyWithdrawLP(
         uint256 _orderId,
-        uint256 _poolId,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
-    )
-        external
-        whenNotPaused
-        nonReentrant
-        onlyMineOwner(_poolId)
-        returns (bool)
-    {
+    ) external whenNotPaused nonReentrant returns (bool) {
         require(!orderStates[_orderId], "Invalid orderId");
 
         address _account = _msgSender();
 
+        uint256 _poolId = poolIdOfAccount[_account];
+
+        require(mineOwners[_poolId] == _account, "Not MineOwner");
+
         require(block.timestamp < _deadline, "Signature expired");
 
-        bytes memory data = abi.encode(
-            _orderId,
-            _poolId,
-            _account,
-            _amount,
-            _deadline
-        );
+        bytes memory data = abi.encode(_orderId, _account, _amount, _deadline);
 
         bytes32 _hash = keccak256(data);
 
@@ -435,7 +426,7 @@ contract MinePoolsV3 is
             "Invalid Paras"
         );
 
-        _verifyUnStakeLP(
+        _verifyUnStakeLPOrYGIO(
             _orderId,
             _amounts,
             _stakingOrderIds,
@@ -631,7 +622,7 @@ contract MinePoolsV3 is
             _amounts.length > 0 && _stakingOrderIds.length > 0,
             "Invalid Paras"
         );
-        _verifyUnStakeLP(
+        _verifyUnStakeLPOrYGIO(
             _orderId,
             _amounts,
             _stakingOrderIds,
@@ -951,16 +942,13 @@ contract MinePoolsV3 is
 
         require(
             mineOwners[_paras.poolId] != ZERO_ADDRESS && _paras.poolId > 0,
-            "Invalid poolNumber"
+            "Invalid poolId"
         );
 
         if (poolIdOfAccount[_invitee] > 0) {
             // _account is Old User
 
-            require(
-                poolIdOfAccount[_invitee] == _paras.poolId,
-                "Error poolNumber"
-            );
+            require(poolIdOfAccount[_invitee] == _paras.poolId, "Error poolId");
 
             return;
         } else {
@@ -1060,7 +1048,7 @@ contract MinePoolsV3 is
         _verifySignature(_hash, _signature);
     }
 
-    function _verifyUnStakeLP(
+    function _verifyUnStakeLPOrYGIO(
         uint256 _orderId,
         uint256[] calldata _amounts,
         uint256[] calldata _stakingOrderIds,
@@ -1155,10 +1143,5 @@ contract MinePoolsV3 is
             success && (data.length == 0 || abi.decode(data, (bool))),
             "Low-level call failed"
         );
-    }
-
-    modifier onlyMineOwner(uint256 _poolId) {
-        require(mineOwners[_poolId] == _msgSender(), "caller not MineOwner");
-        _;
     }
 }
