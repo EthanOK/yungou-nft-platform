@@ -14,7 +14,6 @@ abstract contract YGIOStakingDomain {
     struct StakingYGIOParas {
         uint256 amount;
         uint256 stakeDays;
-        uint256 deadline;
     }
 
     struct StakeYGIOData {

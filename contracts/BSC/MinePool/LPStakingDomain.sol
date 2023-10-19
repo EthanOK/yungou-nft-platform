@@ -16,7 +16,6 @@ abstract contract LPStakingDomain {
         uint256 amount;
         uint256 stakeDays;
         address inviter;
-        uint256 deadline;
     }
 
     struct StakeLPOrderData {

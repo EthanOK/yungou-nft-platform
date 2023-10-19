@@ -14,7 +14,6 @@ abstract contract YGMEStakingDomain is ERC721Holder {
     struct StakingYGMEParas {
         uint256[] tokenIds;
         uint256 stakeDays;
-        uint256 deadline;
     }
 
     struct StakingYGMEData {
