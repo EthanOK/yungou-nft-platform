@@ -132,8 +132,12 @@ contract MinePoolsV3 is
         return systemSigner;
     }
 
-    function getPoolIds() external view onlyOwner returns (uint256[] memory) {
+    function getPoolIds() external view returns (uint256[] memory) {
         return poolIds;
+    }
+
+    function getPoolNumber() external view returns (uint256) {
+        return poolIds.length;
     }
 
     function getTotalStakeLPAll() external view returns (uint256) {
@@ -247,48 +251,42 @@ contract MinePoolsV3 is
     }
 
     function applyMineOwner(
-        uint256 _poolNumber,
+        uint256 _poolId,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        require(_poolNumber > 0, "Invalid PoolNumber");
+        require(_poolId > 0, "Invalid PoolNumber");
 
-        require(mineOwners[_poolNumber] == ZERO_ADDRESS, "poolNumber exists");
+        require(mineOwners[_poolId] == ZERO_ADDRESS, "poolNumber exists");
 
         address _poolOwner = _msgSender();
 
-        _verifyMinerOwner(
-            _poolNumber,
-            _poolOwner,
-            _amount,
-            _deadline,
-            _signature
-        );
+        _verifyMinerOwner(_poolId, _poolOwner, _amount, _deadline, _signature);
 
         require(
             IERC20(LPTOKEN).balanceOf(_poolOwner) >= _amount,
             "Insufficient balance of LP"
         );
 
-        mineOwners[_poolNumber] = _poolOwner;
+        mineOwners[_poolId] = _poolOwner;
 
         balanceMineOwners[_poolOwner] = _amount;
 
-        poolIdOfAccount[_poolOwner] = _poolNumber;
+        poolIdOfAccount[_poolOwner] = _poolId;
 
-        poolIds.push(_poolNumber);
+        poolIds.push(_poolId);
 
         unchecked {
             totalStakingLP += _amount;
 
-            stakingLPAmountsOfPool[_poolNumber] += _amount;
+            stakingLPAmountsOfPool[_poolId] += _amount;
         }
 
         // transfer LP (account --> contract)
         IERC20(LPTOKEN).transferFrom(_poolOwner, address(this), _amount);
 
-        emit NewLPPool(_poolNumber, _poolOwner, _amount, block.number);
+        emit NewLPPool(_poolId, _poolOwner, _amount, block.number);
 
         return true;
     }
@@ -384,7 +382,7 @@ contract MinePoolsV3 is
 
                 stakeLPOrderDatas[_stakeOrderId] = StakeLPOrderData({
                     owner: _account,
-                    poolNumber: _paras.poolNumber,
+                    poolId: _paras.poolId,
                     amount: _paras.amount,
                     startTime: uint128(block.timestamp),
                     endTime: uint128(
@@ -401,7 +399,7 @@ contract MinePoolsV3 is
 
             _stakeLPData.totalStaking += _paras.amount;
 
-            stakingLPAmountsOfPool[_paras.poolNumber] += _paras.amount;
+            stakingLPAmountsOfPool[_paras.poolId] += _paras.amount;
 
             stakingLPDays[_account] += _paras.stakeDays;
 
@@ -412,7 +410,7 @@ contract MinePoolsV3 is
         IERC20(LPTOKEN).transferFrom(_account, address(this), _paras.amount);
 
         emit StakeLP(
-            _paras.poolNumber,
+            _paras.poolId,
             _account,
             _paras.amount,
             block.timestamp,
@@ -479,7 +477,7 @@ contract MinePoolsV3 is
 
                 require(_data.owner == _account, "Invalid account");
 
-                require(_data.poolNumber == _poolNumber, "Invalid poolNumber");
+                require(_data.poolId == _poolNumber, "Invalid poolNumber");
 
                 require(
                     block.timestamp >= _data.endTime,
@@ -925,8 +923,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _paras.deadline, "Signature has expired");
 
         require(
-            mineOwners[_paras.poolNumber] != ZERO_ADDRESS &&
-                _paras.poolNumber > 0,
+            mineOwners[_paras.poolId] != ZERO_ADDRESS && _paras.poolId > 0,
             "Invalid poolNumber"
         );
 
@@ -934,7 +931,7 @@ contract MinePoolsV3 is
             // _account is Old User
 
             require(
-                poolIdOfAccount[_invitee] == _paras.poolNumber,
+                poolIdOfAccount[_invitee] == _paras.poolId,
                 "Error poolNumber"
             );
 
@@ -944,11 +941,11 @@ contract MinePoolsV3 is
 
             // check superior's poolId, superior is old user
             require(
-                poolIdOfAccount[_paras.inviter] == _paras.poolNumber,
+                poolIdOfAccount[_paras.inviter] == _paras.poolId,
                 "Invalid poolId"
             );
 
-            if (_paras.inviter != mineOwners[_paras.poolNumber]) {
+            if (_paras.inviter != mineOwners[_paras.poolId]) {
                 // _account's superior is not mineOwner
 
                 // check superior's stakeLPAmount
@@ -959,7 +956,7 @@ contract MinePoolsV3 is
             }
 
             bytes memory data = abi.encode(
-                _paras.poolNumber,
+                _paras.poolId,
                 _invitee,
                 _paras.inviter,
                 _paras.deadline
@@ -971,7 +968,7 @@ contract MinePoolsV3 is
 
             inviters[_invitee] = _paras.inviter;
 
-            poolIdOfAccount[_invitee] = _paras.poolNumber;
+            poolIdOfAccount[_invitee] = _paras.poolId;
         }
     }
 
