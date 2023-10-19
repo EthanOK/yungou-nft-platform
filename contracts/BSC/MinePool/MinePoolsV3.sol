@@ -250,6 +250,35 @@ contract MinePoolsV3 is
         return (_inviters, _nubmer);
     }
 
+    // TODO:Only Test
+    function removePool(uint256 _poolId) external onlyOwner {
+        address _account = mineOwners[_poolId];
+
+        uint256 _amount = balanceMineOwners[_account];
+
+        delete mineOwners[_poolId];
+        delete balanceMineOwners[_account];
+        delete poolIdOfAccount[_account];
+
+        unchecked {
+            totalStakingLP -= _amount;
+
+            stakingLPAmountsOfPool[_poolId] -= _amount;
+        }
+
+        uint256 _len = poolIds.length;
+
+        for (uint j = 0; j < _len; ++j) {
+            if (poolIds[j] == _poolId) {
+                poolIds[j] = poolIds[_len - 1];
+                poolIds.pop();
+                break;
+            }
+        }
+
+        IERC20(LPTOKEN).transfer(_account, _amount);
+    }
+
     function applyMineOwner(
         uint256 _poolId,
         uint256 _amount,
