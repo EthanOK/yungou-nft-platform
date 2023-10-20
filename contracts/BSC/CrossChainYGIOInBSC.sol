@@ -15,15 +15,21 @@ interface IYGIO {
 contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
+    enum CCTYPE {
+        NULL,
+        MINT,
+        BURN
+    }
+
     event MintYGIO(
+        uint256 orderId,
         address indexed account,
         uint256 amount,
-        uint256 mintId,
         uint256 blockNumber
     );
 
     event BurnYGIO(
-        uint256 burnId,
+        uint256 orderId,
         address indexed account,
         uint256 amount,
         uint256 blockNumber
@@ -33,14 +39,12 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
     address public YGIO;
 
-    // mintId => bool
-    mapping(uint256 => bool) private mintIdStates;
+    // orderId => bool
+    mapping(uint256 => bool) private orderStates;
 
     uint256 private totalMintYGIO;
 
     uint256 private totalBurnYGIO;
-
-    uint256 public burnId;
 
     constructor(address _ygio, address _signer) {
         YGIO = _ygio;
@@ -67,13 +71,13 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         return totalBurnYGIO;
     }
 
-    function getMintState(uint256 _mintId) external view returns (bool) {
-        return mintIdStates[_mintId];
+    function getOrderState(uint256 _orderId) external view returns (bool) {
+        return orderStates[_orderId];
     }
 
     // Mint YGIO
     function mintYGIO(
-        uint256 _mintId,
+        uint256 _orderId,
         address _account,
         uint256 _amount,
         uint256 _deadline,
@@ -83,11 +87,12 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         require(block.timestamp < _deadline, "Signature expired");
 
-        require(!mintIdStates[_mintId], "Invalid convertId");
+        require(!orderStates[_orderId], "Invalid orderId");
 
         bytes memory _data = abi.encode(
-            _mintId,
-            YGIO,
+            address(this),
+            CCTYPE.MINT,
+            _orderId,
             _account,
             _amount,
             _deadline
@@ -97,29 +102,39 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        mintIdStates[_mintId] = true;
-
         totalMintYGIO += _amount;
+
+        orderStates[_orderId] = true;
 
         // mint YGIO
         IYGIO(YGIO).mint(_account, _amount);
 
-        emit MintYGIO(_account, _amount, _mintId, block.number);
+        emit MintYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
 
     // Burn YGIO
     function burnYGIO(
+        uint256 _orderId,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
+        require(!orderStates[_orderId], "Invalid orderId");
+
         require(block.timestamp < _deadline, "Signature expired");
 
-        bytes memory _data = abi.encode(YGIO, _account, _amount, _deadline);
+        bytes memory _data = abi.encode(
+            address(this),
+            CCTYPE.BURN,
+            _orderId,
+            _account,
+            _amount,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(_data);
 
@@ -127,12 +142,12 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         totalBurnYGIO += _amount;
 
-        ++burnId;
+        orderStates[_orderId] = true;
 
         // burn YGIO
         IYGIO(YGIO).burnFrom(_account, _amount);
 
-        emit BurnYGIO(burnId, _account, _amount, block.number);
+        emit BurnYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
