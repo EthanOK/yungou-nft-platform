@@ -63,6 +63,10 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         signer = _signer;
     }
 
+    function getSigner() external view onlyOwner returns (address) {
+        return signer;
+    }
+
     function getTotalMintYGIO() external view returns (uint256) {
         return totalMintYGIO;
     }

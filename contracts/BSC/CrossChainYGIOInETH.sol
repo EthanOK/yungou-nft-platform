@@ -3,9 +3,18 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+interface IYGIO {
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
+}
 
 contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
@@ -30,9 +39,9 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         uint256 blockNumber
     );
 
-    address signer;
+    address private signer;
 
-    address YGIO;
+    address public YGIO;
 
     // orderId => bool
     mapping(uint256 => bool) private orderStates;
@@ -52,6 +61,10 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         } else {
             _unpause();
         }
+    }
+
+    function getSigner() external view onlyOwner returns (address) {
+        return signer;
     }
 
     function setSigner(address _signer) external onlyOwner {
@@ -101,7 +114,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         orderStates[_orderId] = true;
 
         // transfer (account --> Contract)
-        IERC20(YGIO).transferFrom(_account, address(this), _amount);
+        IYGIO(YGIO).transferFrom(_account, address(this), _amount);
 
         emit BurnYGIO(_orderId, _account, _amount, block.number);
 
@@ -140,7 +153,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         orderStates[_orderId] = true;
 
         // transfer (Contract --> account)
-        IERC20(YGIO).transfer(_account, _amount);
+        IYGIO(YGIO).transfer(_account, _amount);
 
         emit MintYGIO(_orderId, _account, _amount, block.number);
 
