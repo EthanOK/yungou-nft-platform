@@ -574,7 +574,7 @@ contract MinePoolsV3 is
 
         _checkStakeDays(_paras.stakeDays);
 
-        _verifyStakeYGIO(_account, _paras, _deadline, _signature);
+        _verifyStakeYGIO(_orderId, _account, _paras, _deadline, _signature);
 
         uint256 _balance = IERC20(YGIO).balanceOf(_account);
 
@@ -1002,8 +1002,9 @@ contract MinePoolsV3 is
 
             bytes memory data = abi.encode(
                 _orderId,
-                _paras.poolId,
                 _invitee,
+                _paras.amount,
+                _paras.stakeDays,
                 _paras.inviter,
                 _deadline
             );
@@ -1019,6 +1020,7 @@ contract MinePoolsV3 is
     }
 
     function _verifyStakeYGIO(
+        uint256 _orderId,
         address _account,
         StakingYGIOParas calldata _paras,
         uint256 _deadline,
@@ -1027,6 +1029,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature has expired");
 
         bytes memory data = abi.encode(
+            _orderId,
             _account,
             _paras.amount,
             _paras.stakeDays,
