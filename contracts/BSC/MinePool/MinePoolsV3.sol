@@ -937,6 +937,8 @@ contract MinePoolsV3 is
 
         require(account == _msgSender(), "Invalid account");
 
+        require(tokenAddress == YGIO, "Invalid tokenAddress");
+
         bytes32 _hash = keccak256(_data);
 
         _verifySignature(_hash, _signature);
