@@ -336,7 +336,13 @@ contract MinePoolsV3 is
 
         require(block.timestamp < _deadline, "Signature expired");
 
-        bytes memory data = abi.encode(_orderId, _account, _amount, _deadline);
+        bytes memory data = abi.encode(
+            _orderId,
+            LPTOKEN,
+            _account,
+            _amount,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(data);
 
