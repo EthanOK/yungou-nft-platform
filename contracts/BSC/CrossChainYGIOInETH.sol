@@ -21,18 +21,18 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
     enum CCTYPE {
         NULL,
-        MINT,
-        BURN
+        SEND,
+        CLAIM
     }
 
-    event MintYGIO(
+    event ClaimYGIO(
         uint256 orderId,
         address indexed account,
         uint256 amount,
         uint256 blockNumber
     );
 
-    event BurnYGIO(
+    event SendYGIO(
         uint256 orderId,
         address indexed account,
         uint256 amount,
@@ -84,7 +84,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
     }
 
     // It’s not really burn, It just locks the token in the contract.
-    function burnYGIO(
+    function sendYGIO(
         uint256 _orderId,
         uint256 _amount,
         uint256 _deadline,
@@ -98,7 +98,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         bytes memory _data = abi.encode(
             address(this),
-            CCTYPE.BURN,
+            CCTYPE.SEND,
             _orderId,
             _account,
             _amount,
@@ -116,20 +116,19 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         // transfer (account --> Contract)
         IYGIO(YGIO).transferFrom(_account, address(this), _amount);
 
-        emit BurnYGIO(_orderId, _account, _amount, block.number);
+        emit SendYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
 
-    // It's not a real mint, it just unlocks the tokens in the contract.
-    function mintYGIO(
+    // it just unlocks the tokens in the contract.
+    function claimYGIO(
         uint256 _orderId,
-        address _account,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        // address _account = _msgSender();
+        address _account = _msgSender();
 
         require(block.timestamp < _deadline, "Signature expired");
 
@@ -137,7 +136,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
 
         bytes memory _data = abi.encode(
             address(this),
-            CCTYPE.MINT,
+            CCTYPE.CLAIM,
             _orderId,
             _account,
             _amount,
@@ -155,7 +154,7 @@ contract CrossChainYGIOInETH is Ownable, Pausable, ReentrancyGuard {
         // transfer (Contract --> account)
         IYGIO(YGIO).transfer(_account, _amount);
 
-        emit MintYGIO(_orderId, _account, _amount, block.number);
+        emit ClaimYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }

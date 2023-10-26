@@ -17,18 +17,18 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
     enum CCTYPE {
         NULL,
-        MINT,
-        BURN
+        SEND,
+        CLAIM
     }
 
-    event MintYGIO(
+    event ClaimYGIO(
         uint256 orderId,
         address indexed account,
         uint256 amount,
         uint256 blockNumber
     );
 
-    event BurnYGIO(
+    event SendYGIO(
         uint256 orderId,
         address indexed account,
         uint256 amount,
@@ -79,15 +79,14 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         return orderStates[_orderId];
     }
 
-    // Mint YGIO
-    function mintYGIO(
+    // Claim YGIO
+    function claimYGIO(
         uint256 _orderId,
-        address _account,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
-        // address _account = _msgSender();
+        address _account = _msgSender();
 
         require(block.timestamp < _deadline, "Signature expired");
 
@@ -95,7 +94,7 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         bytes memory _data = abi.encode(
             address(this),
-            CCTYPE.MINT,
+            CCTYPE.CLAIM,
             _orderId,
             _account,
             _amount,
@@ -113,13 +112,13 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         // mint YGIO
         IYGIO(YGIO).mint(_account, _amount);
 
-        emit MintYGIO(_orderId, _account, _amount, block.number);
+        emit ClaimYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
 
-    // Burn YGIO
-    function burnYGIO(
+    // Send YGIO
+    function sendYGIO(
         uint256 _orderId,
         uint256 _amount,
         uint256 _deadline,
@@ -133,7 +132,7 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
 
         bytes memory _data = abi.encode(
             address(this),
-            CCTYPE.BURN,
+            CCTYPE.SEND,
             _orderId,
             _account,
             _amount,
@@ -151,7 +150,7 @@ contract CrossChainYGIOInBSC is Ownable, Pausable, ReentrancyGuard {
         // burn YGIO
         IYGIO(YGIO).burnFrom(_account, _amount);
 
-        emit BurnYGIO(_orderId, _account, _amount, block.number);
+        emit SendYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
