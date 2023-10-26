@@ -168,6 +168,24 @@ contract MinePoolsV3 is
         return stakeLPDatas[_account];
     }
 
+    function getStakeLPOrderData(
+        uint256 _orderId
+    ) external view returns (StakeLPOrderData memory) {
+        return stakeLPOrderDatas[_orderId];
+    }
+
+    function getStakeYGIOOrderData(
+        uint256 _orderId
+    ) external view returns (StakeYGIOOrderData memory) {
+        return stakeYGIOOrderDatas[_orderId];
+    }
+
+    function getStakingYGMEData(
+        uint256 _orderId
+    ) external view returns (StakingYGMEData memory) {
+        return stakingYGMEDatas[_orderId];
+    }
+
     function getStakeLPState(address _account) external view returns (bool) {
         StakeLPData memory _stakeLPData = stakeLPDatas[_account];
 
