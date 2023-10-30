@@ -146,6 +146,7 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
         bytes memory _data = abi.encode(
             address(this),
             CCTYPE.CLAIM,
+            YGIO,
             _orderId,
             _account,
             _amount,
@@ -186,6 +187,7 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
         bytes memory _data = abi.encode(
             address(this),
             CCTYPE.SEND,
+            YGIO,
             _orderId,
             _account,
             _amount,
