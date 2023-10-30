@@ -5,16 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 interface IYGIO {
-    function transfer(address to, uint256 amount) external returns (bool);
+    function mint(address to, uint256 amount) external;
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
+    function burnFrom(address account, uint256 value) external;
 }
 
 interface IYGME {
@@ -23,9 +18,11 @@ interface IYGME {
         address to,
         uint256 tokenId
     ) external;
+
+    function swap(address to, address _recommender, uint256 mintNum) external;
 }
 
-contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
+contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
 
     enum CCTYPE {
@@ -77,7 +74,8 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
     uint256 private totalClaimYGME;
 
-    uint256 private lockedYGIO;
+    // mint - burn in BSC
+    uint256 private liquidityYGIO;
 
     uint256[] private lockedYGME;
 
@@ -100,12 +98,12 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
         }
     }
 
-    function getSigner() external view onlyOwner returns (address) {
-        return signer;
-    }
-
     function setSigner(address _signer) external onlyOwner {
         signer = _signer;
+    }
+
+    function getSigner() external view onlyOwner returns (address) {
+        return signer;
     }
 
     function getTotalClaimYGIO() external view returns (uint256) {
@@ -128,52 +126,11 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
         return lockedYGME;
     }
 
-    function getLockedYGIOAmount() external view returns (uint256) {
-        return lockedYGIO;
+    function getLiquidityYGIOAmount() external view returns (uint256) {
+        return liquidityYGIO;
     }
 
-    // It’s not really burn, It just locks the token in the contract.
-    function sendYGIO(
-        uint256 _orderId,
-        uint256 _amount,
-        uint256 _deadline,
-        bytes calldata _signature
-    ) external whenNotPaused nonReentrant returns (bool) {
-        address _account = _msgSender();
-
-        require(!orderStates[_orderId], "Invalid orderId");
-
-        require(block.timestamp < _deadline, "Signature expired");
-
-        bytes memory _data = abi.encode(
-            address(this),
-            CCTYPE.SEND,
-            YGIO,
-            _orderId,
-            _account,
-            _amount,
-            _deadline
-        );
-
-        bytes32 _hash = keccak256(_data);
-
-        _verifySignature(_hash, _signature);
-
-        totalSendYGIO += _amount;
-
-        lockedYGIO += _amount;
-
-        orderStates[_orderId] = true;
-
-        // transfer (account --> Contract)
-        IYGIO(YGIO).transferFrom(_account, address(this), _amount);
-
-        emit SendYGIO(_orderId, _account, _amount, block.number);
-
-        return true;
-    }
-
-    // it just unlocks the tokens in the contract.
+    // Claim YGIO
     function claimYGIO(
         uint256 _orderId,
         uint256 _amount,
@@ -189,7 +146,6 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
         bytes memory _data = abi.encode(
             address(this),
             CCTYPE.CLAIM,
-            YGIO,
             _orderId,
             _account,
             _amount,
@@ -202,14 +158,54 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         totalClaimYGIO += _amount;
 
-        lockedYGIO -= _amount;
+        liquidityYGIO += _amount;
 
         orderStates[_orderId] = true;
 
-        // transfer (Contract --> account)
-        IYGIO(YGIO).transfer(_account, _amount);
+        // mint YGIO
+        IYGIO(YGIO).mint(_account, _amount);
 
         emit ClaimYGIO(_orderId, _account, _amount, block.number);
+
+        return true;
+    }
+
+    // Send YGIO
+    function sendYGIO(
+        uint256 _orderId,
+        uint256 _amount,
+        uint256 _deadline,
+        bytes calldata _signature
+    ) external whenNotPaused nonReentrant returns (bool) {
+        address _account = _msgSender();
+
+        require(!orderStates[_orderId], "Invalid orderId");
+
+        require(block.timestamp < _deadline, "Signature expired");
+
+        bytes memory _data = abi.encode(
+            address(this),
+            CCTYPE.SEND,
+            _orderId,
+            _account,
+            _amount,
+            _deadline
+        );
+
+        bytes32 _hash = keccak256(_data);
+
+        _verifySignature(_hash, _signature);
+
+        totalSendYGIO += _amount;
+
+        liquidityYGIO -= _amount;
+
+        orderStates[_orderId] = true;
+
+        // burn YGIO
+        IYGIO(YGIO).burnFrom(_account, _amount);
+
+        emit SendYGIO(_orderId, _account, _amount, block.number);
 
         return true;
     }
@@ -293,14 +289,17 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         orderStates[_orderId] = true;
 
-        require(_amount <= lockedYGME.length, "Insufficient lockedYGME");
+        if (_amount > lockedYGME.length) {
+            // TODO:_recommender
+            IYGME(YGME).swap(_account, address(this), _amount);
+        } else {
+            for (uint256 i = 0; i < _amount; ++i) {
+                uint256 _tokenId = lockedYGME[lockedYGME.length - 1];
 
-        for (uint256 i = 0; i < _amount; ++i) {
-            uint256 _tokenId = lockedYGME[lockedYGME.length - 1];
+                lockedYGME.pop();
 
-            lockedYGME.pop();
-
-            IYGME(YGME).safeTransferFrom(address(this), _account, _tokenId);
+                IYGME(YGME).safeTransferFrom(address(this), _account, _tokenId);
+            }
         }
 
         emit ClaimYGME(_orderId, _account, _amount, block.number);
