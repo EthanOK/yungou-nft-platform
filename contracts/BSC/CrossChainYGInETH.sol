@@ -77,8 +77,6 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
     uint256 private totalClaimYGME;
 
-    uint256 private lockedYGIO;
-
     uint256[] private lockedYGME;
 
     // orderId => bool
@@ -129,7 +127,7 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
     }
 
     function getLockedYGIOAmount() external view returns (uint256) {
-        return lockedYGIO;
+        return totalSendYGIO - totalClaimYGIO;
     }
 
     // It’s not really burn, It just locks the token in the contract.
@@ -161,8 +159,6 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         totalSendYGIO += _amount;
 
-        lockedYGIO += _amount;
-
         orderStates[_orderId] = true;
 
         // transfer (account --> Contract)
@@ -186,6 +182,8 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         require(!orderStates[_orderId], "Invalid orderId");
 
+        require(_amount <= totalSendYGIO - totalClaimYGIO, "Invalid amount");
+
         bytes memory _data = abi.encode(
             address(this),
             CCTYPE.CLAIM,
@@ -201,8 +199,6 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
         _verifySignature(_hash, _signature);
 
         totalClaimYGIO += _amount;
-
-        lockedYGIO -= _amount;
 
         orderStates[_orderId] = true;
 

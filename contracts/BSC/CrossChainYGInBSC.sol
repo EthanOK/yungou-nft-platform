@@ -74,9 +74,6 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
     uint256 private totalClaimYGME;
 
-    // mint - burn in BSC
-    uint256 private liquidityYGIO;
-
     uint256[] private lockedYGME;
 
     // orderId => bool
@@ -127,7 +124,7 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
     }
 
     function getLiquidityYGIOAmount() external view returns (uint256) {
-        return liquidityYGIO;
+        return totalClaimYGIO - totalSendYGIO;
     }
 
     // Claim YGIO
@@ -159,8 +156,6 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
         totalClaimYGIO += _amount;
 
-        liquidityYGIO += _amount;
-
         orderStates[_orderId] = true;
 
         // mint YGIO
@@ -184,6 +179,8 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
         require(block.timestamp < _deadline, "Signature expired");
 
+        require(_amount <= totalClaimYGIO - totalSendYGIO, "Invalid amount");
+
         bytes memory _data = abi.encode(
             address(this),
             CCTYPE.SEND,
@@ -199,8 +196,6 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
         _verifySignature(_hash, _signature);
 
         totalSendYGIO += _amount;
-
-        liquidityYGIO -= _amount;
 
         orderStates[_orderId] = true;
 
