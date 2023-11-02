@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 interface IYGIO {
     function mint(address to, uint256 amount) external;
@@ -22,7 +23,7 @@ interface IYGME {
     function swap(address to, address _recommender, uint256 mintNum) external;
 }
 
-contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
+contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
     using ECDSA for bytes32;
 
     enum CCTYPE {
@@ -76,6 +77,8 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
     uint256[] private lockedYGME;
 
+    address private recommender;
+
     // orderId => bool
     mapping(uint256 => bool) private orderStates;
 
@@ -101,6 +104,14 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
     function getSigner() external view onlyOwner returns (address) {
         return signer;
+    }
+
+    function setRecommender(address _recommender) external onlyOwner {
+        recommender = _recommender;
+    }
+
+    function getRecommender() external view onlyOwner returns (address) {
+        return recommender;
     }
 
     function getTotalClaimYGIO() external view returns (uint256) {
@@ -288,7 +299,7 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard {
 
         if (_amount > lockedYGME.length) {
             // TODO:_recommender
-            IYGME(YGME).swap(_account, address(this), _amount);
+            IYGME(YGME).swap(_account, recommender, _amount);
         } else {
             for (uint256 i = 0; i < _amount; ++i) {
                 uint256 _tokenId = lockedYGME[lockedYGME.length - 1];

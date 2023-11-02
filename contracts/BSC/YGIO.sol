@@ -16,7 +16,7 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
     // white Lists
     mapping(address => bool) private whiteLists;
 
-    constructor(address _slippageAccount) ERC20("YGIO", "YGIO") {
+    constructor(address _slippageAccount) ERC20("BYGIO", "BYGIO") {
         slippageAccount = _slippageAccount;
     }
 
