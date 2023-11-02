@@ -297,22 +297,34 @@ contract CrossChainYGInBSC is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         orderStates[_orderId] = true;
 
-        if (_amount > lockedYGME.length) {
+        uint256 _lockedAmount = lockedYGME.length;
+
+        if (_amount > _lockedAmount) {
+            uint256 _unLockAmount = _amount - _lockedAmount;
+
             // TODO:_recommender
-            IYGME(YGME).swap(_account, recommender, _amount);
-        } else {
-            for (uint256 i = 0; i < _amount; ++i) {
-                uint256 _tokenId = lockedYGME[lockedYGME.length - 1];
+            IYGME(YGME).swap(_account, recommender, _unLockAmount);
 
-                lockedYGME.pop();
-
-                IYGME(YGME).safeTransferFrom(address(this), _account, _tokenId);
+            if (_lockedAmount > 0) {
+                _unLockYGME(_account, _lockedAmount);
             }
+        } else {
+            _unLockYGME(_account, _amount);
         }
 
         emit ClaimYGME(_orderId, _account, _amount, block.number);
 
         return true;
+    }
+
+    function _unLockYGME(address _account, uint256 _amount) internal {
+        for (uint256 i = 0; i < _amount; ++i) {
+            uint256 _tokenId = lockedYGME[lockedYGME.length - 1];
+
+            lockedYGME.pop();
+
+            IYGME(YGME).safeTransferFrom(address(this), _account, _tokenId);
+        }
     }
 
     function _verifySignature(
