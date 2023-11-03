@@ -56,7 +56,10 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
         _mint(to, amount);
     }
 
-    function burnFrom(address account, uint256 value) external {
+    function burnFrom(
+        address account,
+        uint256 value
+    ) external onlyOwnerOrWhiteList {
         _spendAllowance(account, _msgSender(), value);
         _burn(account, value);
     }
