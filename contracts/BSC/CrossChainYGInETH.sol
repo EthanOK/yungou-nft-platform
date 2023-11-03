@@ -23,6 +23,8 @@ interface IYGME {
         address to,
         uint256 tokenId
     ) external;
+
+    function swap(address to, address _recommender, uint256 mintNum) external;
 }
 
 contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
@@ -79,6 +81,8 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
     uint256[] private lockedYGME;
 
+    address private recommender;
+
     // orderId => bool
     mapping(uint256 => bool) private orderStates;
 
@@ -104,6 +108,14 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
     function setSigner(address _signer) external onlyOwner {
         signer = _signer;
+    }
+
+    function setRecommender(address _recommender) external onlyOwner {
+        recommender = _recommender;
+    }
+
+    function getRecommender() external view onlyOwner returns (address) {
+        return recommender;
     }
 
     function getTotalClaimYGIO() external view returns (uint256) {
@@ -289,8 +301,27 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
         orderStates[_orderId] = true;
 
-        require(_amount <= lockedYGME.length, "Insufficient lockedYGME");
+        uint256 _lockedAmount = lockedYGME.length;
 
+        if (_amount > _lockedAmount) {
+            uint256 _unLockAmount = _amount - _lockedAmount;
+
+            // TODO:_recommender
+            IYGME(YGME).swap(_account, recommender, _unLockAmount);
+
+            if (_lockedAmount > 0) {
+                _unLockYGME(_account, _lockedAmount);
+            }
+        } else {
+            _unLockYGME(_account, _amount);
+        }
+
+        emit ClaimYGME(_orderId, _account, _amount, block.number);
+
+        return true;
+    }
+
+    function _unLockYGME(address _account, uint256 _amount) internal {
         for (uint256 i = 0; i < _amount; ++i) {
             uint256 _tokenId = lockedYGME[lockedYGME.length - 1];
 
@@ -298,10 +329,6 @@ contract CrossChainYGInETH is Ownable, Pausable, ReentrancyGuard, ERC721Holder {
 
             IYGME(YGME).safeTransferFrom(address(this), _account, _tokenId);
         }
-
-        emit ClaimYGME(_orderId, _account, _amount, block.number);
-
-        return true;
     }
 
     function _verifySignature(
