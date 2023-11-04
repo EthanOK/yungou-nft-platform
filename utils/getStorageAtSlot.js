@@ -10,8 +10,13 @@ async function getSlotData() {
     "0x1b489201D974D37DDd2FaF6756106a7651914A63",
     7
   );
+
   const total_ = BigNumber.from(slotData).toNumber();
+
   const totalSupply = total_ - 1;
+
   console.log(totalSupply);
+
+  return totalSupply;
 }
 getSlotData();
