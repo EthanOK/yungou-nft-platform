@@ -50,7 +50,7 @@ contract MinePoolsV3 is
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
 
-    // stakingDays 0 100 300 0
+    // stakingDays: 0 100 300 0
     uint64[4] private stakingDays;
 
     uint256 private callCount;
@@ -283,6 +283,7 @@ contract MinePoolsV3 is
         uint256 _orderId,
         uint256 _applyType,
         MinerRole _mineRole,
+        uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
@@ -300,7 +301,7 @@ contract MinePoolsV3 is
             "Invalid mineRole"
         );
 
-        uint256 _amount = _mineRole == MinerRole.FIRSTLEVEL
+        uint256 _amountNeed = _mineRole == MinerRole.FIRSTLEVEL
             ? mineOwnerConditions[0]
             : mineOwnerConditions[1];
 
@@ -323,19 +324,16 @@ contract MinePoolsV3 is
 
         // Apply directly to the mine owner
         if (_applyType == 0) {
-            require(
-                IERC20(LPTOKEN).balanceOf(_account) >= _amount,
-                "Insufficient balance of LP"
-            );
+            require(_amountNeed == _amount, "Invalid amount");
 
             unchecked {
-                balanceMineOwners[_account] = _amount;
+                balanceMineOwners[_account] = _amountNeed;
 
-                totalStakingLP += _amount;
+                totalStakingLP += _amountNeed;
             }
 
             // transfer LP (account --> contract)
-            IERC20(LPTOKEN).transferFrom(_account, address(this), _amount);
+            IERC20(LPTOKEN).transferFrom(_account, address(this), _amountNeed);
         } else {
             // Miner upgraded to mine owner
 
@@ -343,8 +341,10 @@ contract MinePoolsV3 is
 
             uint256 _amountStaking = _stakeLPData.totalStaking;
 
+            require(_amountStaking == _amount, "Invalid amount");
+
             require(
-                _amountStaking + balanceMineOwners[_account] >= _amount,
+                _amountStaking + balanceMineOwners[_account] >= _amountNeed,
                 "StakingLP: Insufficient"
             );
 
