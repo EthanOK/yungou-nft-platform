@@ -43,12 +43,6 @@ abstract contract YGIOStakingDomain {
     // total Staking YGIO
     uint256 totalStakingYGIO;
 
-    // total Staking YGIO days(All user)
-    uint256 totalStakingYGIODays;
-
-    // account => total staking YGIO Days
-    mapping(address => uint256) stakingYGIODays;
-
     // account => StakeYGIOrderData
     mapping(address => StakeYGIOData) stakeYGIODatas;
 

@@ -120,12 +120,28 @@ contract MinePoolsV3 is
         ONEDAY = _second;
     }
 
+    function setMineOwnerConditions(
+        uint256[2] calldata _conditions
+    ) external onlyOwner {
+        // 0：first level
+        // 1：second level
+        mineOwnerConditions = _conditions;
+    }
+
     function setSigner(address _signer) external onlyOwner {
         systemSigner = _signer;
     }
 
     function getStakingDays() external view returns (uint64[4] memory) {
         return stakingDays;
+    }
+
+    function getMineOwnerConditions()
+        external
+        view
+        returns (uint256[2] memory)
+    {
+        return mineOwnerConditions;
     }
 
     function getOrderState(uint256 _orderId) external view returns (bool) {
@@ -144,7 +160,7 @@ contract MinePoolsV3 is
         return mineOwners;
     }
 
-    function getPoolNumber() external view returns (uint256) {
+    function getMinePoolNumber() external view returns (uint256) {
         return mineOwners.length;
     }
 
@@ -220,40 +236,6 @@ contract MinePoolsV3 is
 
     function getTotalStakeYGMEAll() external view returns (uint256) {
         return totalStakingYGME;
-    }
-
-    function getTotalStakeDays() external view returns (uint256) {
-        return totalStakingLPDays + totalStakingYGIODays + totalStakingYGMEDays;
-    }
-
-    function getTotalStakeLPDays() external view returns (uint256) {
-        return totalStakingLPDays;
-    }
-
-    function getTotalStakeLPDaysOf(
-        address _account
-    ) external view returns (uint256) {
-        return stakingLPDays[_account];
-    }
-
-    function getTotalStakeYGIODays() external view returns (uint256) {
-        return totalStakingYGIODays;
-    }
-
-    function getTotalStakeYGIODaysOf(
-        address _account
-    ) external view returns (uint256) {
-        return stakingYGIODays[_account];
-    }
-
-    function getTotalStakeYGMEDays() external view returns (uint256) {
-        return totalStakingYGMEDays;
-    }
-
-    function getTotalStakeYGMEDaysOf(
-        address _account
-    ) external view returns (uint256) {
-        return stakingYGMEDays[_account];
     }
 
     function queryInviters(
@@ -483,11 +465,7 @@ contract MinePoolsV3 is
         unchecked {
             totalStakingLP += _paras.amount;
 
-            totalStakingLPDays += _paras.stakeDays;
-
             _stakeLPData.totalStaking += _paras.amount;
-
-            stakingLPDays[_account] += _paras.stakeDays;
 
             ++callCount;
         }
@@ -665,11 +643,7 @@ contract MinePoolsV3 is
         unchecked {
             totalStakingYGIO += _paras.amount;
 
-            totalStakingYGIODays += _paras.stakeDays;
-
             _stakeYGIOData.totalStaking += _paras.amount;
-
-            stakingYGIODays[_account] += _paras.stakeDays;
 
             ++callCount;
         }
@@ -792,15 +766,9 @@ contract MinePoolsV3 is
         }
 
         {
-            uint256 _days = _sumTimes / ONEDAY;
-
             totalStakingYGIO -= _sumAmountYGIO;
 
-            totalStakingYGIODays -= _days;
-
             _stakeYGIOData.totalStaking -= _sumAmountYGIO;
-
-            stakingYGIODays[_account] -= _days;
         }
 
         orderStates[_orderId] = true;
@@ -877,10 +845,6 @@ contract MinePoolsV3 is
             totalStakingYGME += _len;
 
             stakingYGMEAmounts[_account] += _len;
-
-            totalStakingYGMEDays += (_paras.stakeDays * _len);
-
-            stakingYGMEDays[_account] += (_paras.stakeDays * _len);
         }
 
         orderStates[_orderId] = true;
@@ -951,15 +915,9 @@ contract MinePoolsV3 is
             IERC721(YGME).safeTransferFrom(address(this), _account, _tokenId);
         }
 
-        uint256 _days = _sumTimes / ONEDAY;
-
         totalStakingYGME -= _length;
 
         stakingYGMEAmounts[_account] -= _length;
-
-        totalStakingYGMEDays -= _days;
-
-        stakingYGMEDays[_account] -= _days;
 
         orderStates[_orderId] = true;
 

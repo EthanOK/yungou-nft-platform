@@ -67,12 +67,6 @@ abstract contract LPStakingDomain {
     // total Staking LP Amount(All user exclude mineOwner)
     uint256 totalStakingLP;
 
-    // total Staking LP days(All user)
-    uint256 totalStakingLPDays;
-
-    // account => total staking LP Days
-    mapping(address => uint256) stakingLPDays;
-
     // account => StakeLPData
     mapping(address => StakeLPData) stakeLPDatas;
 
