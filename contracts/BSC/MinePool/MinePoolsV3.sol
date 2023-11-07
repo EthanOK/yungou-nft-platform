@@ -291,6 +291,8 @@ contract MinePoolsV3 is
 
         address _account = _msgSender();
 
+        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
+
         // 0: Apply directly 1：Miner upgrade
         require(_applyType == 0 || _applyType == 1, "Invalid apply type");
 
@@ -425,6 +427,8 @@ contract MinePoolsV3 is
         require(!orderStates[_orderId], "Invalid orderId");
 
         address _account = _msgSender();
+
+        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
 
         _checkStakeDays(_paras.stakeDays);
 
@@ -604,6 +608,8 @@ contract MinePoolsV3 is
         require(!orderStates[_orderId], "Invalid orderId");
 
         address _account = _msgSender();
+
+        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
 
         _checkStakeDays(_paras.stakeDays);
 
