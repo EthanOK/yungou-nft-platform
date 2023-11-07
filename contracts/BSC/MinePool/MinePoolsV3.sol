@@ -23,7 +23,16 @@ contract MinePoolsV3 is
     using ECDSA for bytes32;
     using Counters for Counters.Counter;
 
-    bytes4 public constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
+    enum MinerRole {
+        NULL,
+        // FIRST LEVEL MINER OWNER
+        FIRSTLEVEL,
+        // SECOND LEVEL  MINER OWNER
+        SECONDLEVEL,
+        // MINER
+        MINER
+    }
+
     address public constant ZERO_ADDRESS = address(0);
     // TODO:uint256 public constant ONEDAY = 1 days;
     uint256 public ONEDAY = 1;
@@ -36,6 +45,7 @@ contract MinePoolsV3 is
     address private systemSigner;
 
     Counters.Counter private _currentStakingLPOrderId;
+
     Counters.Counter private _currentStakingYGIOOrderId;
 
     uint256 private rewardsTotal = 100_000_000 * 1e18;
@@ -45,19 +55,15 @@ contract MinePoolsV3 is
 
     uint256 private callCount;
 
-    uint256[] private poolIds;
+    address[] private mineOwners;
 
-    // poolId => mineOwner
-    mapping(uint256 => address) private mineOwners;
+    uint256[2] private mineOwnerConditions;
+
+    // account => MinerRole
+    mapping(address => MinerRole) private minerRoles;
 
     // mineOwner => lp balance
     mapping(address => uint256) private balanceMineOwners;
-
-    // poolId => total stakingLPAmount
-    mapping(uint256 => uint256) private stakingLPAmountsOfPool;
-
-    // account => poolId
-    mapping(address => uint256) private poolIdOfAccount;
 
     // invitee => inviter
     mapping(address => address) private inviters;
@@ -84,6 +90,8 @@ contract MinePoolsV3 is
         systemSigner = _inviteeSigner;
 
         stakingDays = [0, 100, 300, 0];
+
+        mineOwnerConditions = [177000 * 1e18, 88000 * 1e18];
     }
 
     function setPause() external onlyOwner {
@@ -124,20 +132,20 @@ contract MinePoolsV3 is
         return orderStates[_orderId];
     }
 
-    function getMineOwner(uint256 _poolId) external view returns (address) {
-        return mineOwners[_poolId];
+    function getMinerRole(address _account) external view returns (MinerRole) {
+        return minerRoles[_account];
     }
 
     function getSigner() external view onlyOwner returns (address) {
         return systemSigner;
     }
 
-    function getPoolIds() external view returns (uint256[] memory) {
-        return poolIds;
+    function getMineOwners() external view returns (address[] memory) {
+        return mineOwners;
     }
 
     function getPoolNumber() external view returns (uint256) {
-        return poolIds.length;
+        return mineOwners.length;
     }
 
     function getTotalStakeLPAll() external view returns (uint256) {
@@ -145,9 +153,7 @@ contract MinePoolsV3 is
     }
 
     function getTotalStakeLP(address _account) external view returns (uint256) {
-        uint256 _poolId = poolIdOfAccount[_account];
-
-        if (_account == mineOwners[_poolId]) {
+        if (minerRoles[_account] != MinerRole.NULL) {
             return
                 balanceMineOwners[_account] +
                 stakeLPDatas[_account].totalStaking;
@@ -250,12 +256,6 @@ contract MinePoolsV3 is
         return stakingYGMEDays[_account];
     }
 
-    function getTotalStakeLPInPools(
-        uint256 _poolId
-    ) external view returns (uint256) {
-        return stakingLPAmountsOfPool[_poolId];
-    }
-
     function queryInviters(
         address _invitee,
         uint256 _numberLayers
@@ -269,78 +269,38 @@ contract MinePoolsV3 is
     }
 
     // TODO:Only Test
-    function removePool(uint256 _poolId) external onlyOwner {
-        address _account = mineOwners[_poolId];
+    // function removePool(uint256 _poolId) external onlyOwner {
+    //     address _account = mineOwners[_poolId];
 
-        uint256 _amount = balanceMineOwners[_account];
+    //     uint256 _amount = balanceMineOwners[_account];
 
-        delete mineOwners[_poolId];
-        delete balanceMineOwners[_account];
-        delete poolIdOfAccount[_account];
+    //     delete mineOwners[_poolId];
+    //     delete balanceMineOwners[_account];
+    //     delete poolIdOfAccount[_account];
 
-        unchecked {
-            totalStakingLP -= _amount;
+    //     unchecked {
+    //         totalStakingLP -= _amount;
 
-            stakingLPAmountsOfPool[_poolId] -= _amount;
-        }
+    //         stakingLPAmountsOfPool[_poolId] -= _amount;
+    //     }
 
-        uint256 _len = poolIds.length;
+    //     uint256 _len = poolIds.length;
 
-        for (uint j = 0; j < _len; ++j) {
-            if (poolIds[j] == _poolId) {
-                poolIds[j] = poolIds[_len - 1];
-                poolIds.pop();
-                break;
-            }
-        }
+    //     for (uint j = 0; j < _len; ++j) {
+    //         if (poolIds[j] == _poolId) {
+    //             poolIds[j] = poolIds[_len - 1];
+    //             poolIds.pop();
+    //             break;
+    //         }
+    //     }
 
-        IERC20(LPTOKEN).transfer(_account, _amount);
-    }
+    //     IERC20(LPTOKEN).transfer(_account, _amount);
+    // }
 
     function applyMineOwner(
-        uint256 _poolId,
-        uint256 _amount,
-        uint256 _deadline,
-        bytes calldata _signature
-    ) external whenNotPaused nonReentrant returns (bool) {
-        require(_poolId > 0, "Invalid poolId");
-
-        require(mineOwners[_poolId] == ZERO_ADDRESS, "poolId exists");
-
-        address _poolOwner = _msgSender();
-
-        _verifyMinerOwner(_poolId, _poolOwner, _amount, _deadline, _signature);
-
-        require(
-            IERC20(LPTOKEN).balanceOf(_poolOwner) >= _amount,
-            "Insufficient balance of LP"
-        );
-
-        mineOwners[_poolId] = _poolOwner;
-
-        balanceMineOwners[_poolOwner] = _amount;
-
-        poolIdOfAccount[_poolOwner] = _poolId;
-
-        poolIds.push(_poolId);
-
-        unchecked {
-            totalStakingLP += _amount;
-
-            stakingLPAmountsOfPool[_poolId] += _amount;
-        }
-
-        // transfer LP (account --> contract)
-        IERC20(LPTOKEN).transferFrom(_poolOwner, address(this), _amount);
-
-        emit NewLPPool(_poolId, _poolOwner, _amount, block.number);
-
-        return true;
-    }
-
-    function applyWithdrawLP(
         uint256 _orderId,
-        uint256 _amount,
+        uint256 _applyType,
+        MinerRole _mineRole,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
@@ -348,41 +308,131 @@ contract MinePoolsV3 is
 
         address _account = _msgSender();
 
-        uint256 _poolId = poolIdOfAccount[_account];
+        // 0: Apply directly 1：Miner upgrade
+        require(_applyType == 0 || _applyType == 1, "Invalid apply type");
 
-        require(mineOwners[_poolId] == _account, "Not MineOwner");
-
-        require(block.timestamp < _deadline, "Signature expired");
-
-        bytes memory data = abi.encode(
-            _orderId,
-            LPTOKEN,
-            _account,
-            _amount,
-            _deadline
+        require(
+            (_mineRole == MinerRole.FIRSTLEVEL ||
+                _mineRole == MinerRole.SECONDLEVEL) &&
+                minerRoles[_account] != _mineRole,
+            "Invalid mineRole"
         );
 
-        bytes32 _hash = keccak256(data);
+        uint256 _amount = _mineRole == MinerRole.FIRSTLEVEL
+            ? mineOwnerConditions[0]
+            : mineOwnerConditions[1];
 
-        _verifySignature(_hash, _signature);
+        _verifyMinerOwner(
+            _orderId,
+            _applyType,
+            _account,
+            _mineRole,
+            _deadline,
+            _signature
+        );
 
-        {
-            balanceMineOwners[_account] -= _amount;
-
-            totalStakingLP -= _amount;
-
-            stakingLPAmountsOfPool[_poolId] -= _amount;
+        if (minerRoles[_account] == MinerRole.NULL) {
+            mineOwners.push(_account);
         }
 
         orderStates[_orderId] = true;
 
-        // transfer LP (contract --> account)
-        IERC20(LPTOKEN).transfer(_account, _amount);
+        minerRoles[_account] = _mineRole;
 
-        emit RemoveLPPool(_poolId, _account, _amount, block.number);
+        // Apply directly to the mine owner
+        if (_applyType == 0) {
+            require(
+                IERC20(LPTOKEN).balanceOf(_account) >= _amount,
+                "Insufficient balance of LP"
+            );
+
+            unchecked {
+                balanceMineOwners[_account] = _amount;
+
+                totalStakingLP += _amount;
+            }
+
+            // transfer LP (account --> contract)
+            IERC20(LPTOKEN).transferFrom(_account, address(this), _amount);
+        } else {
+            // Miner upgraded to mine owner
+
+            StakeLPData storage _stakeLPData = stakeLPDatas[_account];
+
+            uint256 _amountStaking = _stakeLPData.totalStaking;
+
+            require(
+                _amountStaking + balanceMineOwners[_account] >= _amount,
+                "StakingLP: Insufficient"
+            );
+
+            delete _stakeLPData.cash;
+
+            delete _stakeLPData.totalStaking;
+
+            uint256[] memory _stakingOrderIds = _stakeLPData.stakingOrderIds;
+
+            for (uint256 i = 0; i < _stakingOrderIds.length; ++i) {
+                delete stakeLPOrderDatas[_stakingOrderIds[i]];
+            }
+
+            delete _stakeLPData.stakingOrderIds;
+
+            unchecked {
+                balanceMineOwners[_account] += _amountStaking;
+            }
+
+            emit NewLPPool(_orderId, _account, _amountStaking, block.number);
+        }
 
         return true;
     }
+
+    // function applyWithdrawLP(
+    //     uint256 _orderId,
+    //     uint256 _amount,
+    //     uint256 _deadline,
+    //     bytes calldata _signature
+    // ) external whenNotPaused nonReentrant returns (bool) {
+    //     require(!orderStates[_orderId], "Invalid orderId");
+
+    //     address _account = _msgSender();
+
+    //     uint256 _poolId = poolIdOfAccount[_account];
+
+    //     require(mineOwners[_poolId] == _account, "Not MineOwner");
+
+    //     require(block.timestamp < _deadline, "Signature expired");
+
+    //     bytes memory data = abi.encode(
+    //         _orderId,
+    //         LPTOKEN,
+    //         _account,
+    //         _amount,
+    //         _deadline
+    //     );
+
+    //     bytes32 _hash = keccak256(data);
+
+    //     _verifySignature(_hash, _signature);
+
+    //     {
+    //         balanceMineOwners[_account] -= _amount;
+
+    //         totalStakingLP -= _amount;
+
+    //         stakingLPAmountsOfPool[_poolId] -= _amount;
+    //     }
+
+    //     orderStates[_orderId] = true;
+
+    //     // transfer LP (contract --> account)
+    //     IERC20(LPTOKEN).transfer(_account, _amount);
+
+    //     emit RemoveLPPool(_poolId, _account, _amount, block.number);
+
+    //     return true;
+    // }
 
     function stakingLP(
         uint256 _orderId,
@@ -418,7 +468,6 @@ contract MinePoolsV3 is
 
             stakeLPOrderDatas[_stakeOrderId] = StakeLPOrderData({
                 owner: _account,
-                poolId: _paras.poolId,
                 amount: _paras.amount,
                 startTime: uint128(block.timestamp),
                 endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
@@ -438,8 +487,6 @@ contract MinePoolsV3 is
 
             _stakeLPData.totalStaking += _paras.amount;
 
-            stakingLPAmountsOfPool[_paras.poolId] += _paras.amount;
-
             stakingLPDays[_account] += _paras.stakeDays;
 
             ++callCount;
@@ -451,7 +498,7 @@ contract MinePoolsV3 is
         IERC20(LPTOKEN).transferFrom(_account, address(this), _paras.amount);
 
         emit StakeLP(
-            _paras.poolId,
+            _orderId,
             _account,
             _paras.amount,
             block.timestamp,
@@ -490,10 +537,6 @@ contract MinePoolsV3 is
         address _account = _msgSender();
 
         uint256 _sumAmountLP;
-
-        uint256 _sumTimes;
-
-        uint256 _poolId = poolIdOfAccount[_account];
 
         StakeLPData storage _stakeLPData = stakeLPDatas[_account];
 
@@ -541,10 +584,6 @@ contract MinePoolsV3 is
                 _stakeLPData.cash -= _amounts[i];
 
                 stakeLPType = StakeLPType.UNSTAKECASH;
-            } else {
-                unchecked {
-                    _sumTimes += (_data.endTime - _data.startTime);
-                }
             }
 
             unchecked {
@@ -552,7 +591,7 @@ contract MinePoolsV3 is
             }
 
             emit StakeLP(
-                _poolId,
+                _orderId,
                 _account,
                 _amounts[i],
                 _data.startTime,
@@ -565,17 +604,9 @@ contract MinePoolsV3 is
         }
 
         {
-            uint256 _days = _sumTimes / ONEDAY;
-
             totalStakingLP -= _sumAmountLP;
 
-            totalStakingLPDays -= _days;
-
             _stakeLPData.totalStaking -= _sumAmountLP;
-
-            stakingLPAmountsOfPool[_poolId] -= _sumAmountLP;
-
-            stakingLPDays[_account] -= _days;
         }
 
         orderStates[_orderId] = true;
@@ -975,7 +1006,7 @@ contract MinePoolsV3 is
         }
 
         // transfer reward( contract--> account)
-        _transferLowCall(tokenAddress, account, amount);
+        IERC20(tokenAddress).transfer(account, amount);
 
         emit WithdrawReward(
             orderId,
@@ -989,34 +1020,21 @@ contract MinePoolsV3 is
 
     function _verifyStakeLP(
         uint256 _orderId,
-        address _invitee,
+        address _account,
         StakingLPParas calldata _paras,
         uint256 _deadline,
         bytes calldata _signature
     ) internal {
         require(block.timestamp < _deadline, "Signature has expired");
 
-        require(
-            mineOwners[_paras.poolId] != ZERO_ADDRESS && _paras.poolId > 0,
-            "Invalid poolId"
-        );
-
-        if (poolIdOfAccount[_invitee] > 0) {
+        if (minerRoles[_account] != MinerRole.NULL) {
             // _account is Old User
-
-            require(poolIdOfAccount[_invitee] == _paras.poolId, "Error poolId");
 
             return;
         } else {
             // _account is New User
 
-            // check superior's poolId, superior is old user
-            require(
-                poolIdOfAccount[_paras.inviter] == _paras.poolId,
-                "Invalid poolId"
-            );
-
-            if (_paras.inviter != mineOwners[_paras.poolId]) {
+            if (minerRoles[_paras.inviter] == MinerRole.MINER) {
                 // _account's superior is not mineOwner
 
                 // check superior's stakeLPAmount
@@ -1028,7 +1046,7 @@ contract MinePoolsV3 is
 
             bytes memory data = abi.encode(
                 _orderId,
-                _invitee,
+                _account,
                 _paras.amount,
                 _paras.stakeDays,
                 _paras.inviter,
@@ -1039,9 +1057,9 @@ contract MinePoolsV3 is
 
             _verifySignature(hash, _signature);
 
-            inviters[_invitee] = _paras.inviter;
+            inviters[_account] = _paras.inviter;
 
-            poolIdOfAccount[_invitee] = _paras.poolId;
+            minerRoles[_account] = MinerRole.MINER;
         }
     }
 
@@ -1090,17 +1108,22 @@ contract MinePoolsV3 is
     }
 
     function _verifyMinerOwner(
-        uint256 _poolId,
+        uint256 _orderId,
+        uint256 _applyType,
         address _account,
-        uint256 _amount,
+        MinerRole _mineRole,
         uint256 _deadline,
         bytes calldata _signature
     ) internal view {
-        require(poolIdOfAccount[_account] == 0, "Invalid poolOwner");
-
         require(block.timestamp < _deadline, "Signature expired");
 
-        bytes memory data = abi.encode(_poolId, _account, _amount, _deadline);
+        bytes memory data = abi.encode(
+            _orderId,
+            _applyType,
+            _account,
+            _mineRole,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(data);
 
@@ -1187,20 +1210,6 @@ contract MinePoolsV3 is
                 _stakeDays == stakingDays[2] ||
                 _stakeDays == stakingDays[3],
             "Invalid stakeDays"
-        );
-    }
-
-    function _transferLowCall(
-        address target,
-        address to,
-        uint256 value
-    ) internal {
-        (bool success, bytes memory data) = target.call(
-            abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, to, value)
-        );
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "Low-level call failed"
         );
     }
 }

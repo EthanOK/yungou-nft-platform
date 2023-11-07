@@ -12,7 +12,6 @@ abstract contract LPStakingDomain {
     }
 
     struct StakingLPParas {
-        uint256 poolId;
         uint256 amount;
         uint256 stakeDays;
         address inviter;
@@ -20,7 +19,6 @@ abstract contract LPStakingDomain {
 
     struct StakeLPOrderData {
         address owner;
-        uint256 poolId;
         uint256 amount;
         uint128 startTime;
         uint128 endTime;
@@ -33,7 +31,7 @@ abstract contract LPStakingDomain {
     }
 
     event StakeLP(
-        uint256 indexed poolId,
+        uint256 indexed orderId,
         address indexed account,
         uint256 amount,
         uint256 startTime,
@@ -45,14 +43,14 @@ abstract contract LPStakingDomain {
     );
 
     event NewLPPool(
-        uint256 poolId,
+        uint256 orderId,
         address mineOwner,
         uint256 amount,
         uint256 blockNumber
     );
 
     event RemoveLPPool(
-        uint256 poolId,
+        uint256 orderId,
         address mineOwner,
         uint256 amount,
         uint256 blockNumber
