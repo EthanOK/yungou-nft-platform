@@ -693,8 +693,6 @@ contract MinePoolsV3 is
 
         uint256 _sumAmountYGIO;
 
-        uint256 _sumTimes;
-
         StakeYGIOData storage _stakeYGIOData = stakeYGIODatas[_account];
 
         ++callCount;
@@ -743,10 +741,6 @@ contract MinePoolsV3 is
                 _stakeYGIOData.cash -= _amounts[i];
 
                 stakeYGIOType = StakeYGIOType.UNSTAKECASH;
-            } else {
-                unchecked {
-                    _sumTimes += (_data.endTime - _data.startTime);
-                }
             }
 
             unchecked {
@@ -868,8 +862,6 @@ contract MinePoolsV3 is
 
         require(_length > 0, "Invalid tokenIds");
 
-        uint256 _sumTimes;
-
         ++callCount;
 
         for (uint256 i = 0; i < _length; ++i) {
@@ -904,10 +896,6 @@ contract MinePoolsV3 is
                 callCount,
                 block.number
             );
-
-            if (_data.endTime != _data.startTime) {
-                _sumTimes += (_data.endTime - _data.startTime);
-            }
 
             delete stakingYGMEDatas[_tokenId];
 
