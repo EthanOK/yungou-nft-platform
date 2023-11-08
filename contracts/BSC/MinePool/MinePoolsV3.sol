@@ -464,18 +464,14 @@ contract MinePoolsV3 is
 
         uint256 _stakeOrderId = _orderId;
 
-        if (_stakeLPData.stakingOrderIds.length == 0) {
-            _stakeLPData.stakingOrderIds = [_stakeOrderId];
-        } else {
-            _stakeLPData.stakingOrderIds.push(_stakeOrderId);
+        _stakeLPData.stakingOrderIds.push(_stakeOrderId);
 
-            stakeLPOrderDatas[_stakeOrderId] = StakeLPOrderData({
-                owner: _account,
-                amount: _paras.amount,
-                startTime: uint128(block.timestamp),
-                endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
-            });
-        }
+        stakeLPOrderDatas[_stakeOrderId] = StakeLPOrderData({
+            owner: _account,
+            amount: _paras.amount,
+            startTime: uint128(block.timestamp),
+            endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
+        });
 
         if (_paras.stakeDays == 0) {
             _stakeType = StakeLPType.STAKING_NO_DEADLINE;
@@ -645,18 +641,14 @@ contract MinePoolsV3 is
 
         uint256 _stakeOrderId = _orderId;
 
-        if (_stakeYGIOData.stakingOrderIds.length == 0) {
-            _stakeYGIOData.stakingOrderIds = [_stakeOrderId];
-        } else {
-            _stakeYGIOData.stakingOrderIds.push(_stakeOrderId);
+        _stakeYGIOData.stakingOrderIds.push(_stakeOrderId);
 
-            stakeYGIOOrderDatas[_stakeOrderId] = StakeYGIOOrderData({
-                owner: _account,
-                amount: _paras.amount,
-                startTime: uint128(block.timestamp),
-                endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
-            });
-        }
+        stakeYGIOOrderDatas[_stakeOrderId] = StakeYGIOOrderData({
+            owner: _account,
+            amount: _paras.amount,
+            startTime: uint128(block.timestamp),
+            endTime: uint128(block.timestamp + _paras.stakeDays * ONEDAY)
+        });
 
         if (_paras.stakeDays == 0) {
             _stakeType = StakeYGIOType.STAKING_NO_DEADLINE;
@@ -838,11 +830,7 @@ contract MinePoolsV3 is
 
             stakingYGMEDatas[_tokenId] = _data;
 
-            if (stakingTokenIds[_account].length == 0) {
-                stakingTokenIds[_account] = [_tokenId];
-            } else {
-                stakingTokenIds[_account].push(_tokenId);
-            }
+            stakingTokenIds[_account].push(_tokenId);
 
             //transfer YGME
             IERC721(YGME).safeTransferFrom(_account, address(this), _tokenId);
