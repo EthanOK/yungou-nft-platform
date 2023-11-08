@@ -44,10 +44,6 @@ contract MinePoolsV3 is
 
     address private systemSigner;
 
-    Counters.Counter private _currentStakingLPOrderId;
-
-    Counters.Counter private _currentStakingYGIOOrderId;
-
     uint256 private rewardsTotal = 100_000_000 * 1e18;
 
     // stakingDays: 0 100 300 0
@@ -57,7 +53,13 @@ contract MinePoolsV3 is
 
     address[] private mineOwners;
 
-    uint256[2] private mineOwnerConditions;
+    uint256 private firstLevelCondition;
+
+    uint256 private secondLevelCondition;
+
+    uint256 private firstLevelNumber;
+
+    uint256 private secondLevelNumber;
 
     // account => MinerRole
     mapping(address => MinerRole) private minerRoles;
@@ -91,7 +93,9 @@ contract MinePoolsV3 is
 
         stakingDays = [0, 100, 300, 0];
 
-        mineOwnerConditions = [177000 * 1e18, 88000 * 1e18];
+        firstLevelCondition = 177000 * 1e18;
+
+        secondLevelCondition = 88000 * 1e18;
     }
 
     function setPause() external onlyOwner {
@@ -121,11 +125,12 @@ contract MinePoolsV3 is
     }
 
     function setMineOwnerConditions(
-        uint256[2] calldata _conditions
+        uint256 _firstLevelCondition,
+        uint256 _secondLevelCondition
     ) external onlyOwner {
-        // 0：first level
-        // 1：second level
-        mineOwnerConditions = _conditions;
+        firstLevelCondition = _firstLevelCondition;
+
+        secondLevelCondition = _secondLevelCondition;
     }
 
     function setSigner(address _signer) external onlyOwner {
@@ -136,12 +141,16 @@ contract MinePoolsV3 is
         return stakingDays;
     }
 
-    function getMineOwnerConditions()
+    function getMineOwnerConditions() external view returns (uint256, uint256) {
+        return (firstLevelCondition, secondLevelCondition);
+    }
+
+    function getMinePoolNumberOfLevel()
         external
         view
-        returns (uint256[2] memory)
+        returns (uint256, uint256)
     {
-        return mineOwnerConditions;
+        return (firstLevelNumber, secondLevelNumber);
     }
 
     function getOrderState(uint256 _orderId) external view returns (bool) {
@@ -276,6 +285,12 @@ contract MinePoolsV3 is
             _sumAmount += balanceMineOwners[_account];
 
             delete balanceMineOwners[_account];
+
+            if (minerRoles[_account] == MinerRole.FIRSTLEVEL) {
+                firstLevelNumber--;
+            } else {
+                secondLevelNumber--;
+            }
         }
 
         unchecked {
@@ -321,8 +336,8 @@ contract MinePoolsV3 is
         );
 
         uint256 _amountNeed = _mineRole == MinerRole.FIRSTLEVEL
-            ? mineOwnerConditions[0]
-            : mineOwnerConditions[1];
+            ? firstLevelCondition
+            : secondLevelCondition;
 
         _verifyMinerOwner(
             _orderId,
@@ -333,8 +348,21 @@ contract MinePoolsV3 is
             _signature
         );
 
-        if (minerRoles[_account] == MinerRole.NULL) {
+        if (
+            minerRoles[_account] == MinerRole.NULL ||
+            minerRoles[_account] == MinerRole.MINER
+        ) {
             mineOwners.push(_account);
+
+            if (_mineRole == MinerRole.FIRSTLEVEL) {
+                ++firstLevelNumber;
+            } else {
+                ++secondLevelNumber;
+            }
+        } else {
+            ++firstLevelNumber;
+
+            secondLevelNumber--;
         }
 
         orderStates[_orderId] = true;
@@ -353,6 +381,8 @@ contract MinePoolsV3 is
 
             // transfer LP (account --> contract)
             IERC20(LPTOKEN).transferFrom(_account, address(this), _amountNeed);
+
+            emit NewLPPool(_orderId, _account, _amountNeed, block.number);
         } else {
             // Miner upgraded to mine owner
 
