@@ -11,6 +11,16 @@ abstract contract LPStakingDomain {
         UNSTAKEONLYOWNER
     }
 
+    enum MinerRole {
+        NULL,
+        // FIRST LEVEL MINER OWNER
+        FIRSTLEVEL,
+        // SECOND LEVEL  MINER OWNER
+        SECONDLEVEL,
+        // MINER
+        MINER
+    }
+
     struct StakingLPParas {
         uint256 amount;
         uint256 stakeDays;
@@ -46,6 +56,8 @@ abstract contract LPStakingDomain {
         uint256 orderId,
         address mineOwner,
         uint256 amount,
+        MinerRole beforeRole,
+        MinerRole afterRole,
         uint256 blockNumber
     );
 

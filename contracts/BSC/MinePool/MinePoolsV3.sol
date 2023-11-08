@@ -23,16 +23,6 @@ contract MinePoolsV3 is
     using ECDSA for bytes32;
     using Counters for Counters.Counter;
 
-    enum MinerRole {
-        NULL,
-        // FIRST LEVEL MINER OWNER
-        FIRSTLEVEL,
-        // SECOND LEVEL  MINER OWNER
-        SECONDLEVEL,
-        // MINER
-        MINER
-    }
-
     address public constant ZERO_ADDRESS = address(0);
     // TODO:uint256 public constant ONEDAY = 1 days;
     uint256 public ONEDAY = 1;
@@ -306,6 +296,7 @@ contract MinePoolsV3 is
                 break;
             }
         }
+
         minerRoles[_account] = MinerRole.NULL;
 
         IERC20(LPTOKEN).transfer(_account, _sumAmount);
@@ -323,6 +314,8 @@ contract MinePoolsV3 is
 
         address _account = _msgSender();
 
+        MinerRole _accountRole = minerRoles[_account];
+
         require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
 
         // 0: Apply directly 1：Miner upgrade
@@ -331,7 +324,7 @@ contract MinePoolsV3 is
         require(
             (_mineRole == MinerRole.FIRSTLEVEL ||
                 _mineRole == MinerRole.SECONDLEVEL) &&
-                minerRoles[_account] != _mineRole,
+                _accountRole != _mineRole,
             "Invalid mineRole"
         );
 
@@ -348,10 +341,7 @@ contract MinePoolsV3 is
             _signature
         );
 
-        if (
-            minerRoles[_account] == MinerRole.NULL ||
-            minerRoles[_account] == MinerRole.MINER
-        ) {
+        if (_accountRole == MinerRole.NULL || _accountRole == MinerRole.MINER) {
             mineOwners.push(_account);
 
             if (_mineRole == MinerRole.FIRSTLEVEL) {
@@ -382,7 +372,14 @@ contract MinePoolsV3 is
             // transfer LP (account --> contract)
             IERC20(LPTOKEN).transferFrom(_account, address(this), _amountNeed);
 
-            emit NewLPPool(_orderId, _account, _amountNeed, block.number);
+            emit NewLPPool(
+                _orderId,
+                _account,
+                _amount,
+                _accountRole,
+                _mineRole,
+                block.number
+            );
         } else {
             // Miner upgraded to mine owner
 
@@ -413,7 +410,14 @@ contract MinePoolsV3 is
                 balanceMineOwners[_account] += _amountStaking;
             }
 
-            emit NewLPPool(_orderId, _account, _amountStaking, block.number);
+            emit NewLPPool(
+                _orderId,
+                _account,
+                _amount,
+                _accountRole,
+                _mineRole,
+                block.number
+            );
         }
 
         return true;
