@@ -83,9 +83,9 @@ contract MinePoolsV3 is
 
         stakingDays = [0, 100, 300, 0];
 
-        firstLevelCondition = 177000 * 1e18;
+        firstLevelCondition = 177 * 1e18;
 
-        secondLevelCondition = 88000 * 1e18;
+        secondLevelCondition = 88 * 1e18;
     }
 
     function setPause() external onlyOwner {
@@ -168,13 +168,8 @@ contract MinePoolsV3 is
     }
 
     function getTotalStakeLP(address _account) external view returns (uint256) {
-        if (minerRoles[_account] != MinerRole.NULL) {
-            return
-                balanceMineOwners[_account] +
-                stakeLPDatas[_account].totalStaking;
-        } else {
-            return stakeLPDatas[_account].totalStaking;
-        }
+        return
+            balanceMineOwners[_account] + stakeLPDatas[_account].totalStaking;
     }
 
     function getBalanceMineOwner(
@@ -202,15 +197,15 @@ contract MinePoolsV3 is
     }
 
     function getStakingYGMEData(
-        uint256 _orderId
+        uint256 _tokenId
     ) external view returns (StakingYGMEData memory) {
-        return stakingYGMEDatas[_orderId];
+        return stakingYGMEDatas[_tokenId];
     }
 
     function getStakeLPState(address _account) external view returns (bool) {
         StakeLPData memory _stakeLPData = stakeLPDatas[_account];
 
-        if (_stakeLPData.cash > 0 || _stakeLPData.stakingOrderIds.length > 0) {
+        if (_stakeLPData.totalStaking > 0) {
             return true;
         } else {
             return false;
@@ -253,11 +248,9 @@ contract MinePoolsV3 is
     function removeAllLPAccount(address _account) external onlyOwner {
         require(minerRoles[_account] != MinerRole.NULL);
 
-        uint256 _sumAmount;
-
         StakeLPData storage _stakeLPData = stakeLPDatas[_account];
 
-        _sumAmount += _stakeLPData.totalStaking;
+        uint256 _sumAmount = _stakeLPData.totalStaking;
 
         delete _stakeLPData.cash;
 
