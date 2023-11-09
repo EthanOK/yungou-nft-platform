@@ -399,6 +399,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature expired");
 
         bytes memory data = abi.encode(
+            address(this),
             _orderId,
             LPTOKEN,
             _account,
@@ -923,12 +924,16 @@ contract MinePoolsV3 is
         require(_data.length > 0 && _signature.length > 0, "Invalid data");
 
         (
+            ,
             uint256 orderId,
             address tokenAddress,
             address account,
             uint256 amount,
             uint256 deadline
-        ) = abi.decode(_data, (uint256, address, address, uint256, uint256));
+        ) = abi.decode(
+                _data,
+                (address, uint256, address, address, uint256, uint256)
+            );
 
         require(block.timestamp < deadline, "Signature expired");
 
@@ -995,6 +1000,7 @@ contract MinePoolsV3 is
             }
 
             bytes memory data = abi.encode(
+                address(this),
                 _orderId,
                 _account,
                 _paras.amount,
@@ -1023,6 +1029,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature has expired");
 
         bytes memory data = abi.encode(
+            address(this),
             _orderId,
             _account,
             _paras.amount,
@@ -1045,6 +1052,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature has expired");
 
         bytes memory data = abi.encode(
+            address(this),
             _orderId,
             _account,
             _paras.tokenIds,
@@ -1068,6 +1076,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature expired");
 
         bytes memory data = abi.encode(
+            address(this),
             _orderId,
             _account,
             _mineRole,
@@ -1090,6 +1099,7 @@ contract MinePoolsV3 is
         require(block.timestamp < _deadline, "Signature has expired");
 
         bytes memory data = abi.encode(
+            address(this),
             _orderId,
             _amounts,
             _stakingOrderIds,
@@ -1109,7 +1119,12 @@ contract MinePoolsV3 is
     ) internal view {
         require(block.timestamp < _deadline, "Signature has expired");
 
-        bytes memory data = abi.encode(_orderId, _tokenIds, _deadline);
+        bytes memory data = abi.encode(
+            address(this),
+            _orderId,
+            _tokenIds,
+            _deadline
+        );
 
         bytes32 _hash = keccak256(data);
 
