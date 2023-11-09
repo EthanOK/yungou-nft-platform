@@ -43,10 +43,6 @@ contract MinePoolsV3 is
 
     address[] private mineOwners;
 
-    uint256 private firstLevelCondition;
-
-    uint256 private secondLevelCondition;
-
     uint256 private firstLevelNumber;
 
     uint256 private secondLevelNumber;
@@ -82,10 +78,6 @@ contract MinePoolsV3 is
         systemSigner = _inviteeSigner;
 
         stakingDays = [0, 100, 300, 0];
-
-        firstLevelCondition = 177 * 1e18;
-
-        secondLevelCondition = 88 * 1e18;
     }
 
     function setPause() external onlyOwner {
@@ -114,25 +106,12 @@ contract MinePoolsV3 is
         ONEDAY = _second;
     }
 
-    function setMineOwnerConditions(
-        uint256 _firstLevelCondition,
-        uint256 _secondLevelCondition
-    ) external onlyOwner {
-        firstLevelCondition = _firstLevelCondition;
-
-        secondLevelCondition = _secondLevelCondition;
-    }
-
     function setSigner(address _signer) external onlyOwner {
         systemSigner = _signer;
     }
 
     function getStakingDays() external view returns (uint64[4] memory) {
         return stakingDays;
-    }
-
-    function getMineOwnerConditions() external view returns (uint256, uint256) {
-        return (firstLevelCondition, secondLevelCondition);
     }
 
     function getMinePoolNumberOfLevel()
@@ -212,24 +191,24 @@ contract MinePoolsV3 is
         }
     }
 
+    function getTotalStakeYGIOAll() external view returns (uint256) {
+        return totalStakingYGIO;
+    }
+
     function getTotalStakeYGIO(
         address _account
     ) external view returns (uint256) {
         return stakeYGIODatas[_account].totalStaking;
     }
 
+    function getTotalStakeYGMEAll() external view returns (uint256) {
+        return totalStakingYGME;
+    }
+
     function getTotalStakeYGME(
         address _account
     ) external view returns (uint256) {
         return stakingYGMEAmounts[_account];
-    }
-
-    function getTotalStakeYGIOAll() external view returns (uint256) {
-        return totalStakingYGIO;
-    }
-
-    function getTotalStakeYGMEAll() external view returns (uint256) {
-        return totalStakingYGME;
     }
 
     function queryInviters(
@@ -299,6 +278,7 @@ contract MinePoolsV3 is
         uint256 _orderId,
         uint256 _applyType,
         MinerRole _mineRole,
+        uint256 _amountNeed,
         uint256 _amount,
         uint256 _deadline,
         bytes calldata _signature
@@ -321,15 +301,12 @@ contract MinePoolsV3 is
             "Invalid mineRole"
         );
 
-        uint256 _amountNeed = _mineRole == MinerRole.FIRSTLEVEL
-            ? firstLevelCondition
-            : secondLevelCondition;
-
         _verifyMinerOwner(
             _orderId,
             _applyType,
             _account,
             _mineRole,
+            _amountNeed,
             _deadline,
             _signature
         );
@@ -1096,6 +1073,7 @@ contract MinePoolsV3 is
         uint256 _applyType,
         address _account,
         MinerRole _mineRole,
+        uint256 _amountNeed,
         uint256 _deadline,
         bytes calldata _signature
     ) internal view {
@@ -1106,6 +1084,7 @@ contract MinePoolsV3 is
             _applyType,
             _account,
             _mineRole,
+            _amountNeed,
             _deadline
         );
 
