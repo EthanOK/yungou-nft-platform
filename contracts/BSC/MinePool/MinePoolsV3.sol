@@ -924,7 +924,7 @@ contract MinePoolsV3 is
         require(_data.length > 0 && _signature.length > 0, "Invalid data");
 
         (
-            ,
+            address _this,
             uint256 orderId,
             address tokenAddress,
             address account,
@@ -934,6 +934,8 @@ contract MinePoolsV3 is
                 _data,
                 (address, uint256, address, address, uint256, uint256)
             );
+
+        require(address(this) == _this, "Invalid this address");
 
         require(block.timestamp < deadline, "Signature expired");
 
