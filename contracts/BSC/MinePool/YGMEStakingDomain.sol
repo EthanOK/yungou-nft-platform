@@ -40,8 +40,5 @@ abstract contract YGMEStakingDomain is ERC721Holder {
     mapping(uint256 => StakingYGMEData) stakingYGMEDatas;
 
     // account => staking tokenIds
-    mapping(address => uint256[]) stakingTokenIds;
-
-    // account => token amount
-    mapping(address => uint256) stakingYGMEAmounts;
+    mapping(address => uint256[]) stakingYGMETokenIds;
 }

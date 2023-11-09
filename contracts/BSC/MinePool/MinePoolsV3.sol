@@ -34,18 +34,25 @@ contract MinePoolsV3 is
 
     address private systemSigner;
 
-    uint256 private rewardsTotal = 100_000_000 * 1e18;
-
     // stakingDays: 0 100 300 0
     uint64[4] private stakingDays;
 
     uint256 private callCount;
 
-    address[] private mineOwners;
-
     uint256 private firstLevelNumber;
 
     uint256 private secondLevelNumber;
+
+    // total Accumulated withdrawReward
+    uint256 private totalAccumulatedWithdraws;
+
+    address[] private mineOwners;
+
+    // orderIds => bool
+    mapping(uint256 => bool) private orderStates;
+
+    // invitee => inviter
+    mapping(address => address) private inviters;
 
     // account => MinerRole
     mapping(address => MinerRole) private minerRoles;
@@ -53,17 +60,8 @@ contract MinePoolsV3 is
     // mineOwner => lp balance
     mapping(address => uint256) private balanceMineOwners;
 
-    // invitee => inviter
-    mapping(address => address) private inviters;
-
-    // orderIds => bool
-    mapping(uint256 => bool) private orderStates;
-
     // account => withdrawReward balance
     mapping(address => uint256) private accumulatedWithdrawRewards;
-
-    // total Accumulated withdrawReward
-    uint256 private totalAccumulatedWithdraws;
 
     constructor(
         address _ygio,
@@ -208,7 +206,7 @@ contract MinePoolsV3 is
     function getTotalStakeYGME(
         address _account
     ) external view returns (uint256) {
-        return stakingYGMEAmounts[_account];
+        return stakingYGMETokenIds[_account].length;
     }
 
     function queryInviters(
@@ -276,7 +274,6 @@ contract MinePoolsV3 is
 
     function applyMineOwner(
         uint256 _orderId,
-        uint256 _applyType,
         MinerRole _mineRole,
         uint256 _amountNeed,
         uint256 _amount,
@@ -289,10 +286,10 @@ contract MinePoolsV3 is
 
         MinerRole _accountRole = minerRoles[_account];
 
-        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
-
-        // 0: Apply directly 1：Miner upgrade
-        require(_applyType == 0 || _applyType == 1, "Invalid apply type");
+        require(
+            stakingYGMETokenIds[_account].length > 0,
+            "Insufficient Staked YGME"
+        );
 
         require(
             (_mineRole == MinerRole.FIRSTLEVEL ||
@@ -303,7 +300,6 @@ contract MinePoolsV3 is
 
         _verifyMinerOwner(
             _orderId,
-            _applyType,
             _account,
             _mineRole,
             _amountNeed,
@@ -330,7 +326,7 @@ contract MinePoolsV3 is
         minerRoles[_account] = _mineRole;
 
         // Apply directly to the mine owner
-        if (_applyType == 0) {
+        if (_accountRole == MinerRole.NULL) {
             require(_amountNeed == _amount, "Invalid amount");
 
             unchecked {
@@ -341,15 +337,6 @@ contract MinePoolsV3 is
 
             // transfer LP (account --> contract)
             IERC20(LPTOKEN).transferFrom(_account, address(this), _amountNeed);
-
-            emit NewLPPool(
-                _orderId,
-                _account,
-                _amount,
-                _accountRole,
-                _mineRole,
-                block.number
-            );
         } else {
             // Miner upgraded to mine owner
 
@@ -379,16 +366,16 @@ contract MinePoolsV3 is
             unchecked {
                 balanceMineOwners[_account] += _amountStaking;
             }
-
-            emit NewLPPool(
-                _orderId,
-                _account,
-                _amount,
-                _accountRole,
-                _mineRole,
-                block.number
-            );
         }
+
+        emit NewLPPool(
+            _orderId,
+            _account,
+            _amount,
+            _accountRole,
+            _mineRole,
+            block.number
+        );
 
         return true;
     }
@@ -449,7 +436,10 @@ contract MinePoolsV3 is
 
         address _account = _msgSender();
 
-        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
+        require(
+            stakingYGMETokenIds[_account].length > 0,
+            "Insufficient Staked YGME"
+        );
 
         _checkStakeDays(_paras.stakeDays);
 
@@ -626,7 +616,10 @@ contract MinePoolsV3 is
 
         address _account = _msgSender();
 
-        require(stakingYGMEAmounts[_account] > 0, "Insufficient Staked YGME");
+        require(
+            stakingYGMETokenIds[_account].length > 0,
+            "Insufficient Staked YGME"
+        );
 
         _checkStakeDays(_paras.stakeDays);
 
@@ -834,7 +827,7 @@ contract MinePoolsV3 is
 
             stakingYGMEDatas[_tokenId] = _data;
 
-            stakingTokenIds[_account].push(_tokenId);
+            stakingYGMETokenIds[_account].push(_tokenId);
 
             //transfer YGME
             IERC721(YGME).safeTransferFrom(_account, address(this), _tokenId);
@@ -852,8 +845,6 @@ contract MinePoolsV3 is
 
         unchecked {
             totalStakingYGME += _len;
-
-            stakingYGMEAmounts[_account] += _len;
         }
 
         orderStates[_orderId] = true;
@@ -890,14 +881,14 @@ contract MinePoolsV3 is
 
             require(block.timestamp >= _data.endTime, "Too early to unStake");
 
-            uint256 _len = stakingTokenIds[_account].length;
+            uint256 _len = stakingYGMETokenIds[_account].length;
 
             for (uint256 j = 0; j < _len; ++j) {
-                if (stakingTokenIds[_account][j] == _tokenId) {
-                    stakingTokenIds[_account][j] = stakingTokenIds[_account][
-                        _len - 1
-                    ];
-                    stakingTokenIds[_account].pop();
+                if (stakingYGMETokenIds[_account][j] == _tokenId) {
+                    stakingYGMETokenIds[_account][j] = stakingYGMETokenIds[
+                        _account
+                    ][_len - 1];
+                    stakingYGMETokenIds[_account].pop();
                     break;
                 }
             }
@@ -919,8 +910,6 @@ contract MinePoolsV3 is
         }
 
         totalStakingYGME -= _length;
-
-        stakingYGMEAmounts[_account] -= _length;
 
         orderStates[_orderId] = true;
 
@@ -1070,7 +1059,6 @@ contract MinePoolsV3 is
 
     function _verifyMinerOwner(
         uint256 _orderId,
-        uint256 _applyType,
         address _account,
         MinerRole _mineRole,
         uint256 _amountNeed,
@@ -1081,7 +1069,6 @@ contract MinePoolsV3 is
 
         bytes memory data = abi.encode(
             _orderId,
-            _applyType,
             _account,
             _mineRole,
             _amountNeed,
