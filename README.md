@@ -64,9 +64,9 @@ https://etherscan.io/address/0x4643b06debe49fce229a77ebc9e7c5c036b2cedc
 
 ## （3）NFT Exchange Platform
 
-ProxyAdmin:
+### 0.ProxyAdmin
 
-https://etherscan.io/address/0xc07d62085ea1a66de2377e12a49e2410203d0a46#readContract
+https://etherscan.io/address/0xc07d62085ea1a66de2377e12a49e2410203d0a46
 
 ### 1.YUNGOU Exchange 1.0
 
@@ -92,7 +92,7 @@ https://etherscan.io/address/0x00000e14b01bffc5e55e11ff92b6d6b1156c5796#code
 
 ### 3.YunGouAggregators
 
-Use [ImmutableCreate2Factory](https://etherscan.io/address/0x0000000000ffe8b47b3e2130213b802212439497#writeContract) Create Contracts
+Use [ImmutableCreate2Factory](https://etherscan.io/address/0x0000000000ffe8b47b3e2130213b802212439497#writeContract#F1) Create Contracts
 
 1. MarketRegistry
 
@@ -118,7 +118,7 @@ https://bscscan.com/address/0xe88e04e739eb73978e76b6a20a86643f2a0e364a
 
 ## （3）NFT Exchange Platform
 
-### 1.ProxyAdmin:
+### 1.ProxyAdmin
 
 https://bscscan.com/address/0xc07d62085ea1a66de2377e12a49e2410203d0a46
 
