@@ -32,8 +32,6 @@ contract MinePoolsV3 is
     address public YGME;
     address public LPTOKEN;
 
-    address private systemSigner;
-
     // stakingDays: 0 100 300 0
     uint64[4] private stakingDays;
 
@@ -47,6 +45,8 @@ contract MinePoolsV3 is
     uint256 private totalAccumulatedWithdraws;
 
     address[] private mineOwners;
+
+    mapping(address => bool) systemSigners;
 
     // orderIds => bool
     mapping(uint256 => bool) private orderStates;
@@ -73,7 +73,7 @@ contract MinePoolsV3 is
         YGME = _ygme;
         LPTOKEN = _lptoken;
 
-        systemSigner = _inviteeSigner;
+        systemSigners[_inviteeSigner] = true;
 
         stakingDays = [0, 100, 300, 0];
     }
@@ -104,8 +104,8 @@ contract MinePoolsV3 is
         ONEDAY = _second;
     }
 
-    function setSigner(address _signer) external onlyOwner {
-        systemSigner = _signer;
+    function setSystemSigner(address _signer) external onlyOwner {
+        systemSigners[_signer] = !systemSigners[_signer];
     }
 
     function getStakingDays() external view returns (uint64[4] memory) {
@@ -128,8 +128,8 @@ contract MinePoolsV3 is
         return minerRoles[_account];
     }
 
-    function getSigner() external view onlyOwner returns (address) {
-        return systemSigner;
+    function getSigner(address _signer) external view returns (bool) {
+        return systemSigners[_signer];
     }
 
     function getMineOwners() external view returns (address[] memory) {
@@ -1141,7 +1141,7 @@ contract MinePoolsV3 is
 
         address signer = _hash.recover(_signature);
 
-        require(signer == systemSigner, "Invalid signature");
+        require(systemSigners[signer], "Invalid signature");
     }
 
     function _queryInviters(
