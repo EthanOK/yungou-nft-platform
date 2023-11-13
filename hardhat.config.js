@@ -4,6 +4,7 @@ require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
+require("hardhat-storage-layout");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

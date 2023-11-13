@@ -6,6 +6,7 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
+    "contract storage": "npx hardhat check",
     "test": "npx hardhat test",
     "testYGIOStake": "npx hardhat test test/YGIOStakingTest.js",
     "testPoolsOfLP": "npx hardhat test test/PoolsOfLPTest.js",
@@ -29,6 +30,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/contracts-upgradeable": "^4.8.2",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "hardhat-storage-layout": "^0.1.7"
   }
 }
