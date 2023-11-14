@@ -806,6 +806,8 @@ contract MinePoolsV3 is
 
         ++callCount;
 
+        orderStates[_orderId] = true;
+
         for (uint256 i = 0; i < _len; ++i) {
             uint256 _tokenId = _paras.tokenIds[i];
 
@@ -847,8 +849,6 @@ contract MinePoolsV3 is
         unchecked {
             totalStakingYGME += _len;
         }
-
-        orderStates[_orderId] = true;
 
         return true;
     }
