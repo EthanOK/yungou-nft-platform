@@ -203,10 +203,16 @@ contract MinePoolsV3 is
         return totalStakingYGME;
     }
 
-    function getTotalStakeYGME(
+    function getTotalStakeYGMENumber(
         address _account
     ) external view returns (uint256) {
         return stakingYGMETokenIds[_account].length;
+    }
+
+    function getTotalStakeYGME(
+        address _account
+    ) external view returns (uint256[] memory) {
+        return stakingYGMETokenIds[_account];
     }
 
     function queryInviters(
