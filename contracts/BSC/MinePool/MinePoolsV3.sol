@@ -861,15 +861,23 @@ contract MinePoolsV3 is
     ) external whenNotPaused nonReentrant returns (bool) {
         require(!orderStates[_orderId], "Invalid orderId");
 
-        _verifyUnStakeYGME(_orderId, _tokenIds, _deadline, _signature);
+        address _account = _msgSender();
+
+        _verifyUnStakeYGME(
+            _orderId,
+            _account,
+            _tokenIds,
+            _deadline,
+            _signature
+        );
 
         uint256 _length = _tokenIds.length;
-
-        address _account = _msgSender();
 
         require(_length > 0, "Invalid tokenIds");
 
         ++callCount;
+
+        orderStates[_orderId] = true;
 
         for (uint256 i = 0; i < _length; ++i) {
             uint256 _tokenId = _tokenIds[i];
@@ -911,8 +919,6 @@ contract MinePoolsV3 is
         }
 
         totalStakingYGME -= _length;
-
-        orderStates[_orderId] = true;
 
         return true;
     }
@@ -1115,6 +1121,7 @@ contract MinePoolsV3 is
 
     function _verifyUnStakeYGME(
         uint256 _orderId,
+        address _account,
         uint256[] calldata _tokenIds,
         uint256 _deadline,
         bytes calldata _signature
@@ -1124,7 +1131,9 @@ contract MinePoolsV3 is
         bytes memory data = abi.encode(
             address(this),
             _orderId,
+            _account,
             _tokenIds,
+            uint256(0),
             _deadline
         );
 
