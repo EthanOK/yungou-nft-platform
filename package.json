@@ -6,7 +6,7 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
-    "contract storage": "npx hardhat check",
+    "storage-layout": "npx hardhat check",
     "test": "npx hardhat test",
     "testYGIOStake": "npx hardhat test test/YGIOStakingTest.js",
     "testPoolsOfLP": "npx hardhat test test/PoolsOfLPTest.js",
