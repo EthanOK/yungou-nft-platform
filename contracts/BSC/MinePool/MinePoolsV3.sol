@@ -278,6 +278,52 @@ contract MinePoolsV3 is
         IERC20(LPTOKEN).transfer(_account, _sumAmount);
     }
 
+    // TODO:Only Test
+    function removeAllYGIOAccount(address _account) external onlyOwner {
+        StakeYGIOData storage _stakeYGIOData = stakeYGIODatas[_account];
+
+        uint256 _sumAmount = _stakeYGIOData.totalStaking;
+
+        delete _stakeYGIOData.cash;
+
+        delete _stakeYGIOData.totalStaking;
+
+        uint256[] memory _stakingOrderIds = _stakeYGIOData.stakingOrderIds;
+
+        for (uint256 i = 0; i < _stakingOrderIds.length; ++i) {
+            delete stakeYGIOOrderDatas[_stakingOrderIds[i]];
+        }
+
+        delete _stakeYGIOData.stakingOrderIds;
+
+        totalStakingYGIO -= _sumAmount;
+
+        IERC20(YGIO).transfer(_account, _sumAmount);
+    }
+
+    // TODO:Only Test
+    function removeAllYGMEAccount(address _account) external onlyOwner {
+        uint256[] memory _stakingTokenIds = stakingYGMETokenIds[_account];
+
+        uint256 _length = _stakingTokenIds.length;
+
+        for (uint256 i = 0; i < _length; ++i) {
+            delete stakingYGMEDatas[_stakingTokenIds[i]];
+        }
+
+        delete stakingYGMETokenIds[_account];
+
+        totalStakingYGME -= _length;
+
+        for (uint256 i = 0; i < _length; ++i) {
+            IERC721(YGME).safeTransferFrom(
+                address(this),
+                _account,
+                _stakingTokenIds[i]
+            );
+        }
+    }
+
     function applyMineOwner(
         uint256 _orderId,
         MinerRole _mineRole,
