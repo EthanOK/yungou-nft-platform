@@ -10,14 +10,14 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
 
     address private slippageAccount;
 
-    // Base 10000
-    mapping(address => uint256) private isTransactionPools;
+    // Transaction pool fees(Base 10000)
+    mapping(address => uint256) private txPoolFeeRates;
 
-    // white Lists
+    // White Lists
     mapping(address => bool) private whiteLists;
 
-    constructor(address _slippageAccount) ERC20("BYGIO", "BYGIO") {
-        slippageAccount = _slippageAccount;
+    constructor() ERC20("YGIO", "YGIO") {
+        slippageAccount = _msgSender();
     }
 
     function setPause() external onlyOwner {
@@ -37,7 +37,7 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
     }
 
     function setTxPoolRate(address txPool, uint256 feeRate) external onlyOwner {
-        isTransactionPools[txPool] = feeRate;
+        txPoolFeeRates[txPool] = feeRate;
     }
 
     function getSlippageAccount() external view returns (address) {
@@ -45,7 +45,7 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
     }
 
     function getPoolRate(address txPool) external view returns (uint256) {
-        return isTransactionPools[txPool];
+        return txPoolFeeRates[txPool];
     }
 
     function setSlippageAccount(address _slippageAccount) external onlyOwner {
@@ -71,10 +71,10 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
         address _account = _msgSender();
 
         // swap(pool => user) or removeLiquidity
-        if (isTransactionPools[_account] == 0) {
+        if (txPoolFeeRates[_account] == 0) {
             _transfer(_account, to, amount);
         } else {
-            uint256 fees = (amount * isTransactionPools[_account]) / BASE_10000;
+            uint256 fees = (amount * txPoolFeeRates[_account]) / BASE_10000;
 
             _transfer(_account, slippageAccount, fees);
 
@@ -110,10 +110,10 @@ contract YGIO_BSC is Pausable, Ownable, ERC20 {
         _spendAllowance(from, spender, amount);
 
         // addLiquidity or swap(user => pool)
-        if (isTransactionPools[to] == 0) {
+        if (txPoolFeeRates[to] == 0) {
             _transfer(from, to, amount);
         } else {
-            uint256 fees = (amount * isTransactionPools[to]) / BASE_10000;
+            uint256 fees = (amount * txPoolFeeRates[to]) / BASE_10000;
 
             _transfer(from, slippageAccount, fees);
 

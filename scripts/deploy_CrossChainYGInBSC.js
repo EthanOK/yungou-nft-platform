@@ -1,12 +1,37 @@
 const hre = require("hardhat");
 
 async function main() {
+  // TODO:
+  await cc_tbsc();
+
+  // await cc_bsc();
+}
+
+async function cc_tbsc() {
   const CrossChainYGInBSC = await hre.ethers.getContractFactory(
     "CrossChainYGInBSC"
   );
   const ygio = "0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f";
 
   const ygme = "0xDb6c494BE6Aae80cc042f9CDA24Ce573aD163A46";
+
+  const signer = "0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA";
+
+  const cc = await CrossChainYGInBSC.deploy(ygio, ygme, signer);
+
+  await cc.deployed();
+
+  console.log(`CrossChainYGInBSC deployed to ${cc.address}`);
+}
+
+async function cc_bsc() {
+  const CrossChainYGInBSC = await hre.ethers.getContractFactory(
+    "CrossChainYGInBSC"
+  );
+  // TODO
+  const ygio = "";
+
+  const ygme = "0xe88e04e739EB73978E76B6A20A86643f2A0E364a";
 
   const signer = "0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA";
 
