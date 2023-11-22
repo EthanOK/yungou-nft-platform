@@ -10,7 +10,9 @@ async function ygio_tbsc() {
 
   const _owner = "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2";
 
-  const ygio = await YGIO_BSC.deploy(_owner);
+  const _cc = "0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D";
+
+  const ygio = await YGIO_BSC.deploy(_owner, _cc);
 
   await ygio.deployed();
 
@@ -22,7 +24,9 @@ async function ygio_bsc() {
 
   const _owner = "0xC675897Bb91797EaeA7584F025A5533DBB13A000";
 
-  const ygio = await YGIO_BSC.deploy(_owner);
+  const _cc = "0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D";
+
+  const ygio = await YGIO_BSC.deploy(_owner, _cc);
 
   await ygio.deployed();
 
@@ -33,6 +37,10 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+// Cross Chain: 0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D
 
 // npx hardhat run scripts/deploy_YGIO_TBSC.js --network tbsc
-// npx hardhat verify --network tbsc 0x071589C3d21CB744321EF98c55322E3b85F11c73 0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2
+// npx hardhat verify --network tbsc 0x071589C3d21CB744321EF98c55322E3b85F11c73 0xC675897Bb91797EaeA7584F025A5533DBB13A000 0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D
+
+// npx hardhat run scripts/deploy_YGIO_TBSC.js --network bsc
+// npx hardhat verify --network bsc 0xa2FCACCDCf80Ab826e3Da6831dA711E7c85C6F67 0xC675897Bb91797EaeA7584F025A5533DBB13A000 0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D

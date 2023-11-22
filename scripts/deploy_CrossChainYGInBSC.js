@@ -2,9 +2,9 @@ const hre = require("hardhat");
 
 async function main() {
   // TODO:
-  await cc_tbsc();
+  // await cc_tbsc();
 
-  // await cc_bsc();
+  await cc_bsc();
 }
 
 async function cc_tbsc() {
@@ -29,7 +29,7 @@ async function cc_bsc() {
     "CrossChainYGInBSC"
   );
   // TODO
-  const ygio = "";
+  const ygio = "0xa2FCACCDCf80Ab826e3Da6831dA711E7c85C6F67";
 
   const ygme = "0xe88e04e739EB73978E76B6A20A86643f2A0E364a";
 
@@ -53,3 +53,7 @@ main().catch((error) => {
 
 // TODO:
 // 部署成功后，将 Cross合约地址 设置 为ygio和ygme 白名单
+
+// npx hardhat run scripts/deploy_CrossChainYGInBSC.js --network bsc
+
+// npx hardhat verify --network bsc 0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D 0xa2FCACCDCf80Ab826e3Da6831dA711E7c85C6F67 0xe88e04e739EB73978E76B6A20A86643f2A0E364a 0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA

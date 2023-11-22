@@ -42,7 +42,8 @@ module.exports = {
     bsc: {
       url: process.env.BSC_URL,
       chainId: 56,
-      accounts: [process.env.PRIVATE_KEY],
+      // process.env.ygnftownerETHMAIN
+      accounts: [process.env.ygnftownerETHMAIN],
     },
 
     tbsc: {

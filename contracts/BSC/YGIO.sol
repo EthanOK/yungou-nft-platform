@@ -16,10 +16,12 @@ contract YGIOToken is Pausable, Ownable, ERC20 {
     // White Lists
     mapping(address => bool) private whiteLists;
 
-    constructor(address _owner) ERC20("YGIO", "YGIO") {
+    constructor(address _owner, address _cc) ERC20("YGIO", "YGIO") {
         slippageAccount = _owner;
 
         _transferOwnership(_owner);
+
+        whiteLists[_cc] = true;
     }
 
     function setPause() external onlyOwner {

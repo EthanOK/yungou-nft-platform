@@ -1,8 +1,8 @@
 const hre = require("hardhat");
 
 async function main() {
-  // await cc_main();
-  await cc_goerli();
+  await cc_main();
+  // await cc_goerli();
 }
 
 async function cc_main() {
@@ -51,4 +51,4 @@ main().catch((error) => {
 // 部署成功后，将 Cross合约地址 设置 为 ygme 白名单
 
 // npx hardhat run scripts/deploy_CrossChainYGInETH.js --network mainnet
-// npx hardhat verify --network goerli 0x19C996c4E4596aADDA9b7756B34bBa614376FDd4 0x1b489201D974D37DDd2FaF6756106a7651914A63 0x28D1bC817DE02C9f105A6986eF85cB04863C3042 0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA
+// npx hardhat verify --network mainnet 0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D 0x19C996c4E4596aADDA9b7756B34bBa614376FDd4 0x1b489201D974D37DDd2FaF6756106a7651914A63 0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA
