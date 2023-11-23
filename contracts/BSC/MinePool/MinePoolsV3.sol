@@ -346,7 +346,8 @@ contract MinePoolsV3 is
         require(
             (_mineRole == MinerRole.FIRSTLEVEL ||
                 _mineRole == MinerRole.SECONDLEVEL) &&
-                _accountRole != _mineRole,
+                _accountRole != _mineRole &&
+                _accountRole != MinerRole.FIRSTLEVEL,
             "Invalid mineRole"
         );
 
