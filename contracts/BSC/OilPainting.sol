@@ -18,7 +18,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     string baseURI;
 
-    address payToken;
+    address payToken = 0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f;
 
     uint256 payPrice = 100 * 1e18;
 
@@ -41,6 +41,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         projectPartys = _projectPartys;
 
         incomeDistributions = _incomeDistributions;
+
         baseURI = _baseURI_;
     }
 
@@ -56,13 +57,20 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         whiteLists[_account] = !whiteLists[_account];
     }
 
-    // price
+    function setPayToken(address _payToken) external onlyOwner {
+        payToken = _payToken;
+    }
+
     function setPayPrice(uint256 _price) external onlyOwner {
         payPrice = _price;
     }
 
     function getWhiteList(address _account) external view returns (bool) {
         return whiteLists[_account];
+    }
+
+    function getPayToken() external view returns (address) {
+        return payToken;
     }
 
     function getPayPrice() external view returns (uint256) {
