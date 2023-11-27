@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-
+const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545/");
 // start: npx hardhat node (forking)
 // npx hardhat run scripts/forking_T.js --network localhost
 
@@ -14,7 +14,10 @@ async function main() {
   await transferETHBinanceToReceiver(myAccount);
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 
 async function setBalance() {
   await helpers.setBalance(
@@ -27,10 +30,15 @@ async function setBalance() {
     ethers.utils.parseEther("100000000000")
   );
 }
+
 async function transferETHBinanceToReceiver(receiver) {
   const accountBinance = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
 
-  const impersonatedSigner = await ethers.getSigner(accountBinance);
+  const impersonatedSigner = await getSigner_ImpersonatingAccounts(
+    accountBinance
+  );
+
+  console.log(ethers.utils.formatEther(await impersonatedSigner.getBalance()));
 
   const tx = await impersonatedSigner.sendTransaction({
     to: receiver,
@@ -38,7 +46,14 @@ async function transferETHBinanceToReceiver(receiver) {
   });
 
   await tx.wait();
+  to: receiver,
+    console.log(
+      ethers.utils.formatEther(await impersonatedSigner.getBalance())
+    );
+
+  console.log(ethers.utils.formatEther(await provider.getBalance(receiver)));
 }
+
 async function transferUSDTBinanceToReceiver(receiver) {
   //Binance: Binance-Peg Tokens
   const accountBinance = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
@@ -63,6 +78,7 @@ async function transferUSDTBinanceToReceiver(receiver) {
 
   console.log(await USDT.balanceOf(receiver));
 }
+
 async function getSigner_ImpersonatingAccounts(account) {
   await network.provider.request({
     method: "hardhat_impersonateAccount",
