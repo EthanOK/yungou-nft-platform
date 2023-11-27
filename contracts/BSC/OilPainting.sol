@@ -16,7 +16,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     uint256 public constant BASE_10000 = 10_000;
 
-    string baseURI;
+    string public baseURI;
 
     address payToken = 0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f;
 
