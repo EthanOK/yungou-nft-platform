@@ -90,6 +90,10 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         return payPrice;
     }
 
+    function getMintedTokenIds() external view returns (uint256[] memory) {
+        return mintedTokenIds;
+    }
+
     function safeMint(
         uint256[] calldata _tokenIds
     ) external whenNotPaused nonReentrant returns (bool) {
