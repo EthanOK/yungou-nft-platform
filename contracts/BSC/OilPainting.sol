@@ -53,6 +53,19 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         }
     }
 
+    function setIncomeDistribution(
+        address[] calldata _projectPartys,
+        uint256[] calldata _incomeDistributions
+    ) external onlyOwner {
+        projectPartys = _projectPartys;
+
+        incomeDistributions = _incomeDistributions;
+    }
+
+    function setBaseURI(string memory _baseURI_) external onlyOwner {
+        baseURI = _baseURI_;
+    }
+
     function setWhiteList(address _account) external onlyOwner {
         whiteLists[_account] = !whiteLists[_account];
     }
