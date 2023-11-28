@@ -1,4 +1,4 @@
-# YUNGOU Project
+# YunGou NFT Platform
 
 `latest version: Excahnge_2.0`
 
