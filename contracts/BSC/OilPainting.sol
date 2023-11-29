@@ -29,24 +29,24 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
     string public baseURI;
 
     // USDT
-    address payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
+    address private payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
 
     uint256 public totalIssue = 1000;
 
-    uint256 totalSafeMintNumber;
+    uint256 private totalSafeMintNumber;
 
-    uint256 totalVolume;
+    uint256 private totalVolume;
 
-    address[] projectPartys;
+    address[] private projectPartys;
 
-    uint256[] incomeDistributions;
+    uint256[] private incomeDistributions;
 
-    uint256[] mintedTokenIds;
+    uint256[] private mintedTokenIds;
 
     // White Lists
     mapping(address => bool) private whiteLists;
 
-    mapping(address => bool) systemSigners;
+    mapping(address => bool) private systemSigners;
 
     constructor(
         address[] memory _projectPartys,
