@@ -33,6 +33,10 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     uint256 public totalIssue = 1000;
 
+    uint256 totalSafeMintNumber;
+
+    uint256 totalVolume;
+
     address[] projectPartys;
 
     uint256[] incomeDistributions;
@@ -100,15 +104,35 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         return mintedTokenIds;
     }
 
+    function getTotalSafeMintData() external view returns (uint256, uint256) {
+        return (totalSafeMintNumber, totalVolume);
+    }
+
     function safeMint(
         uint256[] calldata _tokenIds,
-        uint256[] calldata prices
+        uint256[] calldata _prices,
+        uint256 _deadline,
+        bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
         uint256 _amount = _tokenIds.length;
 
-        require(_amount > 0 && _amount == prices.length, "Invalid paras");
+        require(_amount > 0 && _amount == _prices.length, "Invalid paras");
+
+        require(block.timestamp < _deadline, "Signature has expired");
+
+        bytes memory _data = abi.encode(
+            address(this),
+            _account,
+            _tokenIds,
+            _prices,
+            _deadline
+        );
+
+        bytes32 _hash = keccak256(_data);
+
+        _verifySignature(_hash, _signature);
 
         uint256 _totalPayPrice;
 
@@ -119,11 +143,17 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
             mintedTokenIds.push(_tokenId);
 
-            _totalPayPrice += prices[i];
+            _totalPayPrice += _prices[i];
 
             _mint(_account, _tokenId);
 
-            emit SafeMint(_account, _tokenId, prices[i], block.timestamp);
+            emit SafeMint(_account, _tokenId, _prices[i], block.timestamp);
+        }
+
+        unchecked {
+            totalVolume += _totalPayPrice;
+
+            totalSafeMintNumber += _amount;
         }
 
         for (uint256 i = 0; i < projectPartys.length; ++i) {
