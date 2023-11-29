@@ -6,8 +6,11 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
+    using ECDSA for bytes32;
+
     event SafeMint(
         address indexed account,
         uint256 tokenId,
@@ -25,9 +28,8 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     string public baseURI;
 
-    address payToken = 0x0Fa4640F99f876D78Fc964AFE0DD6649e7C23c4f;
-
-    uint256 payPrice = 100 * 1e18;
+    // USDT
+    address payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
 
     uint256 public totalIssue = 1000;
 
@@ -40,14 +42,19 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
     // White Lists
     mapping(address => bool) private whiteLists;
 
+    mapping(address => bool) systemSigners;
+
     constructor(
         address[] memory _projectPartys,
         uint256[] memory _incomeDistributions,
+        address _signer,
         string memory _baseURI_
     ) ERC721("OilPainting", "OP") {
         projectPartys = _projectPartys;
 
         incomeDistributions = _incomeDistributions;
+
+        systemSigners[_signer] = true;
 
         baseURI = _baseURI_;
     }
@@ -81,20 +88,12 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         payToken = _payToken;
     }
 
-    function setPayPrice(uint256 _price) external onlyOwner {
-        payPrice = _price;
-    }
-
     function getWhiteList(address _account) external view returns (bool) {
         return whiteLists[_account];
     }
 
     function getPayToken() external view returns (address) {
         return payToken;
-    }
-
-    function getPayPrice() external view returns (uint256) {
-        return payPrice;
     }
 
     function getMintedTokenIds() external view returns (uint256[] memory) {
@@ -203,5 +202,16 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         require(owner() == _caller || whiteLists[_caller], "No permission");
         _;
+    }
+
+    function _verifySignature(
+        bytes32 _hash,
+        bytes calldata _signature
+    ) internal view {
+        _hash = _hash.toEthSignedMessageHash();
+
+        address signer = _hash.recover(_signature);
+
+        require(systemSigners[signer], "Invalid signature");
     }
 }
