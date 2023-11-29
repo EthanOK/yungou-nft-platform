@@ -8,6 +8,13 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
+    event SafeMint(
+        address indexed account,
+        uint256 tokenId,
+        uint256 price,
+        uint256 mintTime
+    );
+
     // bytes4(keccak256("transfer(address,uint256)"))
     bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
 
@@ -95,15 +102,16 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
     }
 
     function safeMint(
-        uint256[] calldata _tokenIds
+        uint256[] calldata _tokenIds,
+        uint256[] calldata prices
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
         uint256 _amount = _tokenIds.length;
 
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0 && _amount == prices.length, "Invalid paras");
 
-        uint256 _totalPayPrice = _amount * payPrice;
+        uint256 _totalPayPrice;
 
         for (uint256 i = 0; i < _amount; ++i) {
             uint256 _tokenId = _tokenIds[i];
@@ -112,7 +120,11 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
             mintedTokenIds.push(_tokenId);
 
+            _totalPayPrice += prices[i];
+
             _mint(_account, _tokenId);
+
+            emit SafeMint(_account, _tokenId, prices[i], block.timestamp);
         }
 
         for (uint256 i = 0; i < projectPartys.length; ++i) {
