@@ -31,8 +31,6 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
     // USDT
     address private payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
 
-    uint256 public totalIssue = 1000;
-
     uint256 private totalSafeMintNumber;
 
     uint256 private totalVolume;
@@ -143,7 +141,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         for (uint256 i = 0; i < _amount; ++i) {
             uint256 _tokenId = _tokenIds[i];
 
-            require(_tokenId > 0 && _tokenId <= totalIssue, "Invalid tokenId");
+            require(_tokenId > 0, "Invalid tokenId");
 
             mintedTokenIds.push(_tokenId);
 
@@ -182,7 +180,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
             uint256 _tokenId = _tokenIds[i];
 
-            require(_tokenId > 0 && _tokenId <= totalIssue, "Invalid tokenId");
+            require(_tokenId > 0, "Invalid tokenId");
 
             mintedTokenIds.push(_tokenId);
 
