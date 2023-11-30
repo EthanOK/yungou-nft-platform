@@ -37,6 +37,8 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     uint256 private totalVolume;
 
+    address private systemSigner;
+
     address[] private projectPartys;
 
     uint256[] private incomeDistributions;
@@ -45,8 +47,6 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     // White Lists
     mapping(address => bool) private whiteLists;
-
-    mapping(address => bool) private systemSigners;
 
     constructor(
         address[] memory _projectPartys,
@@ -58,7 +58,7 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         incomeDistributions = _incomeDistributions;
 
-        systemSigners[_signer] = true;
+        systemSigner = _signer;
 
         baseURI = _baseURI_;
     }
@@ -246,6 +246,6 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         address signer = _hash.recover(_signature);
 
-        require(systemSigners[signer], "Invalid signature");
+        require(systemSigner == signer, "Invalid signature");
     }
 }
