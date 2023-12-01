@@ -11,6 +11,11 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
     using ECDSA for bytes32;
 
+    enum CallerType {
+        NUll,
+        ADMINT
+    }
+
     event SafeMint(
         address indexed account,
         uint256 tokenId,
@@ -45,6 +50,9 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     // White Lists
     mapping(address => bool) private whiteLists;
+
+    // orderId => bool
+    mapping(uint256 => bool) private orderStates;
 
     constructor(
         address[] memory _projectPartys,
@@ -110,12 +118,21 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         return (totalSafeMintNumber, totalVolume);
     }
 
+    function getOrderState(uint256 _orderId) external view returns (bool) {
+        return orderStates[_orderId];
+    }
+
     function safeMint(
+        uint256 _orderId,
+        CallerType _type,
         uint256[] calldata _tokenIds,
-        uint256[] calldata _prices,
+        uint256[] memory _prices,
+        address _receiver,
         uint256 _deadline,
         bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
+        require(!orderStates[_orderId], "Invalid orderId");
+
         address _account = _msgSender();
 
         uint256 _amount = _tokenIds.length;
@@ -126,9 +143,12 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         bytes memory _data = abi.encode(
             address(this),
+            _orderId,
+            _type,
             _account,
             _tokenIds,
             _prices,
+            _receiver,
             _deadline
         );
 
@@ -136,21 +156,14 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         _verifySignature(_hash, _signature);
 
-        uint256 _totalPayPrice;
+        orderStates[_orderId] = true;
 
-        for (uint256 i = 0; i < _amount; ++i) {
-            uint256 _tokenId = _tokenIds[i];
-
-            require(_tokenId > 0, "Invalid tokenId");
-
-            mintedTokenIds.push(_tokenId);
-
-            _totalPayPrice += _prices[i];
-
-            _mint(_account, _tokenId);
-
-            emit SafeMint(_account, _tokenId, _prices[i], block.timestamp);
+        if (_type == CallerType.ADMINT) {
+            _prices = new uint[](_amount);
         }
+
+        // mint NFT
+        uint256 _totalPayPrice = _mintNFT(_receiver, _tokenIds, _prices);
 
         unchecked {
             totalVolume += _totalPayPrice;
@@ -158,34 +171,21 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
             totalSafeMintNumber += _amount;
         }
 
-        for (uint256 i = 0; i < projectPartys.length; ++i) {
-            uint256 _amount0 = (_totalPayPrice * incomeDistributions[i]) /
-                BASE_10000;
-
-            _safeTransferFromERC20(
-                payToken,
-                _account,
-                projectPartys[i],
-                _amount0
-            );
+        // pay
+        if (_type == CallerType.NUll) {
+            _payERC20Token(_account, _totalPayPrice);
         }
 
         return true;
     }
 
     function swap(
-        address to,
+        address _receiver,
         uint256[] calldata _tokenIds
     ) external onlyOwnerOrWhiteList whenNotPaused nonReentrant returns (bool) {
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            uint256 _tokenId = _tokenIds[i];
+        uint256[] memory _prices = new uint[](_tokenIds.length);
 
-            require(_tokenId > 0, "Invalid tokenId");
-
-            mintedTokenIds.push(_tokenId);
-
-            _mint(to, _tokenId);
-        }
+        _mintNFT(_receiver, _tokenIds, _prices);
 
         return true;
     }
@@ -245,5 +245,45 @@ contract OilPainting is Ownable, Pausable, ReentrancyGuard, ERC721 {
         address signer = _hash.recover(_signature);
 
         require(systemSigner == signer, "Invalid signature");
+    }
+
+    function _mintNFT(
+        address _receiver,
+        uint256[] calldata _tokenIds,
+        uint256[] memory _prices
+    ) internal returns (uint256) {
+        uint256 _totalPayPrice;
+
+        uint256 _amount = _tokenIds.length;
+
+        for (uint256 i = 0; i < _amount; ++i) {
+            uint256 _tokenId = _tokenIds[i];
+
+            require(_tokenId > 0, "Invalid tokenId");
+
+            mintedTokenIds.push(_tokenId);
+
+            _totalPayPrice += _prices[i];
+
+            _safeMint(_receiver, _tokenId);
+
+            emit SafeMint(_receiver, _tokenId, _prices[i], block.timestamp);
+        }
+
+        return _totalPayPrice;
+    }
+
+    function _payERC20Token(address _account, uint256 _totalPayPrice) internal {
+        for (uint256 i = 0; i < projectPartys.length; ++i) {
+            uint256 _amount0 = (_totalPayPrice * incomeDistributions[i]) /
+                BASE_10000;
+
+            _safeTransferFromERC20(
+                payToken,
+                _account,
+                projectPartys[i],
+                _amount0
+            );
+        }
     }
 }
