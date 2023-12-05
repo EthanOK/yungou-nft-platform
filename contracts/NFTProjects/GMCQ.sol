@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract OilPaintingV2 is Ownable, Pausable, ReentrancyGuard, ERC721 {
+contract GMCQ is Ownable, Pausable, ReentrancyGuard, ERC721 {
     using ECDSA for bytes32;
 
     event SafeMint(
@@ -29,13 +29,15 @@ contract OilPaintingV2 is Ownable, Pausable, ReentrancyGuard, ERC721 {
     string public baseURI;
 
     // TODO：USDT
-    address private payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
+    address public payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
 
     // Record the total number of paid NFTs
     uint256 private totalSafeMintNumber;
 
     // Record the total transaction volume of payment tokens
     uint256 private totalVolume;
+
+    uint256 public totalSupply_MAX = 100;
 
     address private systemSigner;
 
@@ -53,7 +55,7 @@ contract OilPaintingV2 is Ownable, Pausable, ReentrancyGuard, ERC721 {
         uint256[] memory _incomeDistributions,
         address _signer,
         string memory _baseURI_
-    ) ERC721("OilPainting", "OP") {
+    ) ERC721("GoodMorningChongqing", "GMCQ") {
         projectPartys = _projectPartys;
 
         incomeDistributions = _incomeDistributions;
@@ -88,16 +90,12 @@ contract OilPaintingV2 is Ownable, Pausable, ReentrancyGuard, ERC721 {
         whiteLists[_account] = !whiteLists[_account];
     }
 
-    function setPayToken(address _payToken) external onlyOwner {
-        payToken = _payToken;
+    function setMAX_totalSupply(uint256 _totalSupply_MAX) external onlyOwner {
+        totalSupply_MAX = _totalSupply_MAX;
     }
 
     function getWhiteList(address _account) external view returns (bool) {
         return whiteLists[_account];
-    }
-
-    function getPayToken() external view returns (address) {
-        return payToken;
     }
 
     function getMintedTokenIds() external view returns (uint256[] memory) {
@@ -235,7 +233,10 @@ contract OilPaintingV2 is Ownable, Pausable, ReentrancyGuard, ERC721 {
         for (uint256 i = 0; i < _amount; ++i) {
             uint256 _tokenId = _tokenIds[i];
 
-            require(_tokenId > 0, "Invalid tokenId");
+            require(
+                _tokenId > 0 && _tokenId <= totalSupply_MAX,
+                "Invalid tokenId"
+            );
 
             mintedTokenIds.push(_tokenId);
 
