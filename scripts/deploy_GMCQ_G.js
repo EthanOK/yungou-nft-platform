@@ -5,7 +5,7 @@ async function main() {
 }
 
 async function op_g() {
-  const GMCQ = await hre.ethers.getContractFactory("GMCQ");
+  const GMCQ = await hre.ethers.getContractFactory("GoodMorningChongqing");
 
   const _projectPartys = [
     "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2",

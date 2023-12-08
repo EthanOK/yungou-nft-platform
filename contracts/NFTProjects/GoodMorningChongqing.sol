@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract GMCQ is Ownable, Pausable, ReentrancyGuard, ERC721 {
+contract GoodMorningChongqing is Ownable, Pausable, ReentrancyGuard, ERC721 {
     using ECDSA for bytes32;
 
     event SafeMint(
@@ -162,6 +162,14 @@ contract GMCQ is Ownable, Pausable, ReentrancyGuard, ERC721 {
         _mintNFT(_receiver, _tokenIds, _prices);
 
         return true;
+    }
+
+    function withdraw(
+        address _target,
+        address _account,
+        uint256 _value
+    ) external onlyOwner {
+        _safeTransferERC20(_target, _account, _value);
     }
 
     function totalSupply() external view returns (uint256) {
