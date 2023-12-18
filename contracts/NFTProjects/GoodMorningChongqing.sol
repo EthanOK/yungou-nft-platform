@@ -28,8 +28,7 @@ contract GoodMorningChongqing is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     string public baseURI;
 
-    // TODO：USDT
-    address public payToken = 0x965A558b312E288F5A77F851F7685344e1e73EdF;
+    address public payToken = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     // Record the total number of paid NFTs
     uint256 private totalSafeMintNumber;
@@ -80,6 +79,10 @@ contract GoodMorningChongqing is Ownable, Pausable, ReentrancyGuard, ERC721 {
         projectPartys = _projectPartys;
 
         incomeDistributions = _incomeDistributions;
+    }
+
+    function setPayToken(address _payToken) external onlyOwner {
+        payToken = _payToken;
     }
 
     function setBaseURI(string memory _baseURI_) external onlyOwner {

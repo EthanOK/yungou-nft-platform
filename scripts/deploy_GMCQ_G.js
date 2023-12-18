@@ -8,16 +8,16 @@ async function op_g() {
   const GMCQ = await hre.ethers.getContractFactory("GoodMorningChongqing");
 
   const _projectPartys = [
-    "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2",
-    "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2",
-    "0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2",
+    "0xba889CC23789002C01777a8C012B9721296dFF9e",
+    "0xc6F35c2D93ee1c88F335875b5e1EaCF80b559079",
+    "0x43D62a2b6E135100018ad9dBB85D1E2dA0B97167",
   ];
 
   const _incomeDistributions = [6000, 3000, 1000];
 
   const _signer = "0x5ab85B15e0ED0009A8AA606cb07809230fC16eaA";
 
-  const _baseURI = "ipfs://QmPqzX9tYvKaEXpSPXvXxwgZzJj5SZLCVUToUmfDQo4w61/";
+  const _baseURI = "ipfs://QmYcn4grX4MzgEayrcGvL11hcT5inMmbwsZFcoMxZW3fGR/";
 
   const op = await GMCQ.deploy(
     _projectPartys,
@@ -36,5 +36,8 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// npx hardhat run scripts/deploy_GMCQ_G.js --network goerli
-// npx hardhat verify --constructor-args paras/gmcq_g.js --network goerli 0x400df737a64adDB76d30aa0C391e9196F48f93b4
+// npx hardhat run scripts/deploy_GMCQ_G.js --network sepolia
+// npx hardhat verify --constructor-args paras/gmcq_g.js --network sepolia 0xe99E1D7e52cDD7C692cA86283F6138C13D091545
+
+// npx hardhat run scripts/deploy_GMCQ_G.js --network tbsc
+// npx hardhat verify --constructor-args paras/gmcq_g.js --network tbsc 0x9d89960793Af7bdbC70c1464923561cd1381fd22
