@@ -41,3 +41,6 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_GMCQ_G.js --network tbsc
 // npx hardhat verify --constructor-args paras/gmcq_g.js --network tbsc 0x9d89960793Af7bdbC70c1464923561cd1381fd22
+
+// npx hardhat run scripts/deploy_GMCQ_G.js --network mainnet
+// npx hardhat verify --constructor-args paras/gmcq_g.js --network mainnet 0x12EEc80C93FCe6bb5AAB5BFa66D3C6e06CeB7AE1

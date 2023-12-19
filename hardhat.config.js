@@ -32,6 +32,7 @@ module.exports = {
     mainnet: {
       url: process.env.ALCHEMY_MAINNET_URL,
       chainId: 1,
+      // YG_Publish_ETHMAIN ygnftownerETHMAIN
       accounts: [process.env.ygnftownerETHMAIN],
     },
 
@@ -91,7 +92,7 @@ module.exports = {
     customChains: [
       {
         network: "phalcon",
-        chainId: 1,
+        chainId: 110,
         urls: {
           apiURL: process.env.PHALCON_FORK_APIURL,
           browserURL: `https://scan.phalcon.xyz/${process.env.PHALCON_FORK_ID}`,

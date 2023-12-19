@@ -62,6 +62,8 @@ contract GoodMorningChongqing is Ownable, Pausable, ReentrancyGuard, ERC721 {
         systemSigner = _signer;
 
         baseURI = _baseURI_;
+
+        whiteLists[_msgSender()] = true;
     }
 
     function setPause() external onlyOwner {
