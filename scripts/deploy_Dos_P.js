@@ -24,6 +24,7 @@ async function dos_Attack(king_address) {
 
   console.log(`Attack deployed to ${attack.address}`);
 }
+
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
