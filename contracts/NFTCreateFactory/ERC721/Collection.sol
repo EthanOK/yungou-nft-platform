@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import "./ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./ERC721.sol";
 
 contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
     event SafeMint(
@@ -15,12 +14,22 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         uint256 mintTime
     );
 
+    string public constant LAUNCH_PLATFORM = "YunGou";
     bytes4 constant ERC20_TRANSFERFROM_SELECTOR = 0x23b872dd;
     bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
     uint256 public constant BASE_10000 = 10_000;
     address constant ZERO_ADDRESS = address(0);
 
+    struct PriceData {
+        bool special;
+        uint256 price;
+    }
+
     bool initializeState;
+
+    address private platformFeeAccount;
+
+    uint256 private platformFee;
 
     address public payToken;
 
@@ -40,6 +49,8 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     uint256[] private mintedTokenIds;
 
+    mapping(uint256 => PriceData) priceDatas;
+
     mapping(address => bool) private whiteLists;
 
     constructor() ERC721() {}
@@ -51,6 +62,8 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         address _owner,
         address _payToken,
         uint256 _unitPrice,
+        address _platformFeeAccount,
+        uint256 _platformFee,
         address[] calldata _receivers,
         uint256[] calldata _percentages,
         string calldata __baseURI
@@ -70,6 +83,10 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         percentages = _percentages;
 
         baseURI = __baseURI;
+
+        platformFeeAccount = _platformFeeAccount;
+
+        platformFee = _platformFee;
     }
 
     function setPause() external onlyOwner {
@@ -80,13 +97,13 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         }
     }
 
-    // function setIncomeDistribution(
-    //     address[] calldata _projectPartys,
-    //     uint256[] calldata _incomeDistributions
-    // ) external onlyOwner {
-    //     receiverPartys = _projectPartys;
-    //     incomeDistributions = _incomeDistributions;
-    // }
+    function setPercentages(
+        address[] calldata _receivers,
+        uint256[] calldata _percentages
+    ) external onlyOwner {
+        receivers = _receivers;
+        percentages = _percentages;
+    }
 
     function setPayToken(
         address _payToken,
@@ -96,16 +113,36 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         unitPrice = _unitPrice;
     }
 
-    function setBaseURI(string calldata _baseURI_) external onlyOwner {
-        baseURI = _baseURI_;
+    function setTokenPrices(
+        uint256[] calldata _tokenIds,
+        bool _special,
+        uint256[] calldata _prices
+    ) external onlyOwner {
+        require(_tokenIds.length == _prices.length, "Invalid prices");
+
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            priceDatas[_tokenIds[i]] = PriceData(_special, _prices[i]);
+        }
     }
+
+    // function setBaseURI(string calldata _baseURI_) external onlyOwner {
+    //     baseURI = _baseURI_;
+    // }
 
     function setWhiteList(address _account) external onlyOwner {
         whiteLists[_account] = !whiteLists[_account];
     }
 
-    function setMAX_totalSupply(uint256 _totalSupply_MAX) external onlyOwner {
-        totalSupply_MAX = _totalSupply_MAX;
+    // function setMAX_totalSupply(uint256 _totalSupply_MAX) external onlyOwner {
+    //     totalSupply_MAX = _totalSupply_MAX;
+    // }
+
+    function getPercentages()
+        external
+        view
+        returns (address[] memory _receivers, uint256[] memory _percentages)
+    {
+        return (receivers, percentages);
     }
 
     function getWhiteList(address _account) external view returns (bool) {
@@ -128,10 +165,12 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
         uint256 _amount = _tokenIds.length;
 
-        uint256 _totalPayPrice = _amount * unitPrice;
+        (uint256 _totalPayPrice, uint256[] memory _prices) = _calcTotalPayPrice(
+            _tokenIds
+        );
 
         // mint NFT To receiver
-        _mintNFT(_receiver, _tokenIds, unitPrice);
+        _mintNFT(_receiver, _tokenIds, _prices);
 
         unchecked {
             totalIncome += _totalPayPrice;
@@ -149,7 +188,9 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         address _receiver,
         uint256[] calldata _tokenIds
     ) external onlyOwnerOrWhiteList whenNotPaused nonReentrant returns (bool) {
-        _mintNFT(_receiver, _tokenIds, 0);
+        uint256[] memory _prices = new uint256[](_tokenIds.length);
+
+        _mintNFT(_receiver, _tokenIds, _prices);
 
         return true;
     }
@@ -227,7 +268,7 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
     function _mintNFT(
         address _receiver,
         uint256[] calldata _tokenIds,
-        uint256 _price
+        uint256[] memory _prices
     ) internal returns (bool) {
         uint256 _amount = _tokenIds.length;
 
@@ -243,10 +284,36 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
             _safeMint(_receiver, _tokenId);
 
-            emit SafeMint(_receiver, _tokenId, _price, block.timestamp);
+            emit SafeMint(_receiver, _tokenId, _prices[i], block.timestamp);
         }
 
         return true;
+    }
+
+    function _calcTotalPayPrice(
+        uint256[] calldata _tokenIds
+    ) internal view returns (uint256, uint256[] memory) {
+        uint256 _totalPayPrice;
+
+        uint256[] memory _prices = new uint256[](_tokenIds.length);
+
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            PriceData memory priceData = priceDatas[_tokenIds[i]];
+
+            uint256 _tokenPrice;
+
+            if (priceData.special) {
+                _tokenPrice = priceData.price;
+            } else {
+                _tokenPrice = unitPrice;
+            }
+
+            _prices[i] = _tokenPrice;
+
+            _totalPayPrice += _tokenPrice;
+        }
+
+        return (_totalPayPrice, _prices);
     }
 
     function _pay(
@@ -258,15 +325,21 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         if (_payToken == ZERO_ADDRESS) {
             require(_msgValue >= _totalPayPrice, "ETH Insufficient");
 
-            // ONE: address(this) => receivers
+            // 1: address(this) => receivers
             for (uint256 i = 0; i < receivers.length; ++i) {
                 uint256 _amount = (_totalPayPrice * percentages[i]) /
                     BASE_10000;
 
                 _safeTransferETH(receivers[i], _amount);
             }
+
+            // 2: address(this) => platformFeeAccount
+            _safeTransferETH(
+                platformFeeAccount,
+                (_totalPayPrice * platformFee) / BASE_10000
+            );
         } else {
-            // ONE: account => address(this)
+            // 1: account => address(this)
             _safeTransferFromERC20(
                 payToken,
                 _account,
@@ -274,13 +347,20 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
                 _totalPayPrice
             );
 
-            // TWO：address(this) => receivers
+            // 2: address(this) => receivers
             for (uint256 i = 0; i < receivers.length; ++i) {
                 uint256 _amount = (_totalPayPrice * percentages[i]) /
                     BASE_10000;
 
                 _safeTransferERC20(payToken, receivers[i], _amount);
             }
+
+            // 3: address(this) => platformFeeAccount
+            _safeTransferERC20(
+                payToken,
+                platformFeeAccount,
+                (_totalPayPrice * platformFee) / BASE_10000
+            );
         }
     }
 
