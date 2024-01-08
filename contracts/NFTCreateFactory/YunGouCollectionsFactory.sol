@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract YunGouCreateFactory is Ownable, Pausable, ReentrancyGuard {
+contract YunGouCollectionsFactory is Ownable, Pausable, ReentrancyGuard {
     event CreateContract(
         address indexed owner,
         address token,

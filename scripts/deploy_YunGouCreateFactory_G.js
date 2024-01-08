@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   const YunGouCreateFactory = await hre.ethers.getContractFactory(
-    "YunGouCreateFactory"
+    "YunGouCollectionsFactory"
   );
 
   const factory = await YunGouCreateFactory.deploy();
