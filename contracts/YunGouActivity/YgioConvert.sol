@@ -113,6 +113,12 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         return totalConvertOfType[convertType];
     }
 
+    function getYGMEAmount(address account) external view returns (uint256) {
+        return
+            ygme.balanceOf(account) +
+            ygmeStaking.getStakingTokenIds(account).length;
+    }
+
     function convert(
         uint256 _convertType,
         uint256 _amount,
