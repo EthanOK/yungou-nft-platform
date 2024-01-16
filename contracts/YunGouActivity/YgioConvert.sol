@@ -146,6 +146,7 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         bytes memory _data = abi.encode(
             address(this),
             _convertType,
+            _account,
             _amount,
             _nextTime
         );
@@ -183,6 +184,7 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         //     (block.timestamp / ONE_DAYS) *
         //     ONE_DAYS +
         //     (ONE_CYCLE - 8 hours);
+
         convertDatas[_account][_convertType].nextTime = _nextTime;
     }
 
