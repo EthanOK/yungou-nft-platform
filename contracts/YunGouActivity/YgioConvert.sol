@@ -43,22 +43,22 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
 
     address public constant BURN_ADDRESS = address(1);
 
-    address private systemSigner;
-
     IYGME public immutable ygme;
 
     IYgmeStaking public immutable ygmeStaking;
 
     IYGIO public immutable ygio;
 
+    address private systemSigner;
+
     // All Account Convert YGIO Total Amount
-    uint256 totalConvert;
+    uint256 private totalConvert;
 
     // The Account Convert YGIO Total Amount
-    mapping(address => uint256) totalConvertOfAccount;
+    mapping(address => uint256) private totalConvertOfAccount;
 
     // YGIO Total Amount In ConvertType
-    mapping(uint256 => uint256) totalConvertOfType;
+    mapping(uint256 => uint256) private totalConvertOfType;
 
     // account => convertType => ConvertData
     mapping(address => mapping(uint256 => ConvertData)) private convertDatas;
@@ -147,15 +147,7 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        _updataConvertData(_account, _amount, _convertType, _nextTime);
-
-        unchecked {
-            totalConvertOfAccount[_account] += _amount;
-
-            totalConvertOfType[_convertType] += _amount;
-
-            totalConvert += _amount;
-        }
+        _updataData(_convertType, _account, _amount, _nextTime);
 
         ygio.transferFrom(_account, BURN_ADDRESS, _amount);
 
@@ -164,16 +156,22 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         return true;
     }
 
-    function _updataConvertData(
+    function _updataData(
+        uint256 _convertType,
         address _account,
         uint256 _amount,
-        uint256 _convertType,
         uint256 _nextTime
     ) internal {
         unchecked {
             convertDatas[_account][_convertType].totalAmount += _amount;
 
             convertDatas[_account][_convertType].nextTime = _nextTime;
+
+            totalConvertOfAccount[_account] += _amount;
+
+            totalConvertOfType[_convertType] += _amount;
+
+            totalConvert += _amount;
         }
     }
 
