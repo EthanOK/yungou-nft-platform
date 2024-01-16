@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 interface IYGME {
     function balanceOf(address owner) external view returns (uint256 balance);
@@ -26,10 +27,13 @@ interface IYGIO {
 }
 
 contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
+    using ECDSA for bytes32;
+
+    // Topic0: 0xf223d34fa7bf5b0d07f699392b827f6573db287faff53a0ff1d6baff29796029
     event Convert(
+        uint256 indexed convertType,
         address indexed account,
         uint256 indexed amount,
-        uint256 indexed convertType,
         uint256 blockTime
     );
 
@@ -41,6 +45,8 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
     address public constant BURN_ADDRESS = address(1);
     uint256 public constant ONE_DAYS = 1 days;
 
+    address private systemSigner;
+
     IYGME public immutable ygme;
 
     IYgmeStaking public immutable ygmeStaking;
@@ -49,20 +55,31 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
 
     uint256 public ONE_CYCLE = 1 days;
 
-    uint256 public minAmount = 5000 * 1e18;
-
-    uint256 public maxAmount = 10000 * 1e18;
-
+    // All Account Convert YGIO Total Amount
     uint256 totalConvert;
 
+    // The Account Convert YGIO Total Amount
+    mapping(address => uint256) totalConvertOfAccount;
+
+    // YGIO Total Amount In ConvertType
+    mapping(uint256 => uint256) totalConvertOfType;
+
+    // account => convertType => ConvertData
     mapping(address => mapping(uint256 => ConvertData)) private convertDatas;
 
-    constructor(address _ygme, address _ygmeStaking, address _ygio) {
+    constructor(
+        address _ygme,
+        address _ygmeStaking,
+        address _ygio,
+        address _signer
+    ) {
         ygme = IYGME(_ygme);
 
         ygmeStaking = IYgmeStaking(_ygmeStaking);
 
         ygio = IYGIO(_ygio);
+
+        systemSigner = _signer;
     }
 
     function setPause() external onlyOwner {
@@ -77,46 +94,46 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         ONE_CYCLE = _days * 1 days;
     }
 
-    function setAmountRange(
-        uint256 _minAmount,
-        uint256 _maxAmount
-    ) external onlyOwner {
-        minAmount = _minAmount;
-        maxAmount = _maxAmount;
+    function setSystemSigner(address _signer) external onlyOwner {
+        systemSigner = _signer;
     }
 
     function getConvertData(
         address account,
-        uint256 _convertType
+        uint256 convertType
     ) external view returns (ConvertData memory) {
-        return convertDatas[account][_convertType];
-    }
-
-    function getAmountRange()
-        external
-        view
-        onlyOwner
-        returns (uint256, uint256)
-    {
-        return (minAmount, maxAmount);
+        return convertDatas[account][convertType];
     }
 
     function getTotalConvert() external view returns (uint256) {
         return totalConvert;
     }
 
+    function getTotalConvertOfAccount(
+        address account
+    ) external view returns (uint256) {
+        return totalConvertOfAccount[account];
+    }
+
+    function getTotalConvertOfType(
+        uint256 convertType
+    ) external view returns (uint256) {
+        return totalConvertOfType[convertType];
+    }
+
     function convert(
+        uint256 _convertType,
         uint256 _amount,
-        uint256 _convertType
+        uint256 _nextTime,
+        bytes calldata _signature
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
         require(
-            block.timestamp > convertDatas[_account][_convertType].nextTime,
+            block.timestamp >= convertDatas[_account][_convertType].nextTime &&
+                block.timestamp < _nextTime,
             "Time Limit"
         );
-
-        require(minAmount <= _amount && _amount <= maxAmount, "Amount Limit");
 
         require(ygio.balanceOf(_account) >= _amount, "Insufficient YGIO");
 
@@ -126,13 +143,30 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
             "Insufficient YGME"
         );
 
-        _updataConvertData(_account, _amount, _convertType);
+        bytes memory _data = abi.encode(
+            address(this),
+            _convertType,
+            _amount,
+            _nextTime
+        );
 
-        totalConvert += _amount;
+        bytes32 _hash = keccak256(_data);
+
+        _verifySignature(_hash, _signature);
+
+        _updataConvertData(_account, _amount, _convertType, _nextTime);
+
+        unchecked {
+            totalConvertOfAccount[_account] += _amount;
+
+            totalConvertOfType[_convertType] += _amount;
+
+            totalConvert += _amount;
+        }
 
         ygio.transferFrom(_account, BURN_ADDRESS, _amount);
 
-        emit Convert(_account, _amount, _convertType, block.timestamp);
+        emit Convert(_convertType, _account, _amount, block.timestamp);
 
         return true;
     }
@@ -140,13 +174,26 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
     function _updataConvertData(
         address _account,
         uint256 _amount,
-        uint256 _convertType
+        uint256 _convertType,
+        uint256 _nextTime
     ) internal {
         convertDatas[_account][_convertType].totalAmount += _amount;
 
-        convertDatas[_account][_convertType].nextTime =
-            (block.timestamp / ONE_DAYS) *
-            ONE_DAYS +
-            (ONE_CYCLE - 8 hours);
+        // convertDatas[_account][_convertType].nextTime =
+        //     (block.timestamp / ONE_DAYS) *
+        //     ONE_DAYS +
+        //     (ONE_CYCLE - 8 hours);
+        convertDatas[_account][_convertType].nextTime = _nextTime;
+    }
+
+    function _verifySignature(
+        bytes32 _hash,
+        bytes calldata _signature
+    ) internal view {
+        _hash = _hash.toEthSignedMessageHash();
+
+        address signer = _hash.recover(_signature);
+
+        require(systemSigner == signer, "Invalid signature");
     }
 }
