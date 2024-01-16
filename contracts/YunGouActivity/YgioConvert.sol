@@ -29,7 +29,6 @@ interface IYGIO {
 contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
     using ECDSA for bytes32;
 
-    // Topic0: 0xf223d34fa7bf5b0d07f699392b827f6573db287faff53a0ff1d6baff29796029
     event Convert(
         uint256 indexed convertType,
         address indexed account,
@@ -43,7 +42,6 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
     }
 
     address public constant BURN_ADDRESS = address(1);
-    uint256 public constant ONE_DAYS = 1 days;
 
     address private systemSigner;
 
@@ -52,8 +50,6 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
     IYgmeStaking public immutable ygmeStaking;
 
     IYGIO public immutable ygio;
-
-    uint256 public ONE_CYCLE = 1 days;
 
     // All Account Convert YGIO Total Amount
     uint256 totalConvert;
@@ -88,10 +84,6 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         } else {
             _unpause();
         }
-    }
-
-    function setOneCycle(uint256 _days) external onlyOwner {
-        ONE_CYCLE = _days * 1 days;
     }
 
     function setSystemSigner(address _signer) external onlyOwner {
@@ -178,14 +170,11 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         uint256 _convertType,
         uint256 _nextTime
     ) internal {
-        convertDatas[_account][_convertType].totalAmount += _amount;
+        unchecked {
+            convertDatas[_account][_convertType].totalAmount += _amount;
 
-        // convertDatas[_account][_convertType].nextTime =
-        //     (block.timestamp / ONE_DAYS) *
-        //     ONE_DAYS +
-        //     (ONE_CYCLE - 8 hours);
-
-        convertDatas[_account][_convertType].nextTime = _nextTime;
+            convertDatas[_account][_convertType].nextTime = _nextTime;
+        }
     }
 
     function _verifySignature(
