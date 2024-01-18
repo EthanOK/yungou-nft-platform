@@ -90,6 +90,7 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         address[] calldata accounts,
         uint256[] calldata convertTypes
     ) external onlyOwner {
+        require(accounts.length == convertTypes.length, "Invalid Length");
         for (uint256 i = 0; i < accounts.length; ++i) {
             delete convertDatas[accounts[i]][convertTypes[i]].nextTime;
         }
