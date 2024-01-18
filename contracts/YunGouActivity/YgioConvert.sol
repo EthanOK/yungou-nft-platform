@@ -86,6 +86,15 @@ contract YgioConvert is Pausable, Ownable, ReentrancyGuard {
         }
     }
 
+    function clearNextTime(
+        address[] calldata accounts,
+        uint256[] calldata convertTypes
+    ) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; ++i) {
+            delete convertDatas[accounts[i]][convertTypes[i]].nextTime;
+        }
+    }
+
     function setSystemSigner(address _signer) external onlyOwner {
         systemSigner = _signer;
     }
