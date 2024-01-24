@@ -50,7 +50,7 @@ https://etherscan.io/address/0x19C996c4E4596aADDA9b7756B34bBa614376FDd4
 
 https://etherscan.io/address/0x3db8480963a9333a7cda5338c9924e662f743170
 
-### 2.YGME Staking
+### 2.YGME Staking(withdraw YGIO)
 
 https://etherscan.io/address/0x1981f583D723bcbe7A0b41854afaDf7Fc287f11C
 
