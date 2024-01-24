@@ -62,6 +62,12 @@ https://etherscan.io/address/0xC1AE723ad98Af4E2D6EF3e384CBCD9CF4CeF8730
 
 https://etherscan.io/address/0x4643b06debe49fce229a77ebc9e7c5c036b2cedc
 
+### 5.YGIO convert STAS
+
+https://etherscan.io/address/0x4072D5CDd7Ba15de5a2681E42f4c7bC3a59B90FF
+
+### 6.YunGou Swap
+
 ## （3）NFT Exchange Platform
 
 ### 0.ProxyAdmin
@@ -112,9 +118,9 @@ https://bscscan.com/address/0xe88e04e739eb73978e76b6a20a86643f2a0e364a
 
 ### 1.YGIO
 
-## （2）YUNGUO Activity
+https://bscscan.com/address/0xa2FCACCDCf80Ab826e3Da6831dA711E7c85C6F67
 
-### 1.YG
+## （2）YUNGUO Activity
 
 ## （3）NFT Exchange Platform
 
@@ -147,3 +153,11 @@ Use [ImmutableCreate2Factory](https://etherscan.io/address/0x0000000000ffe8b47b3
    https://bscscan.com/address/0x0000007ee460b0928c2119e3b9747454a10d1557
 
 # 三、Cross Chain ETH-BSC
+
+## （1）CrossChainYGInETH(YGME,YGIO)
+
+https://etherscan.io/address/0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D
+
+## （2）CrossChainYGInBSC(YGME,YGIO)
+
+https://bscscan.com/address/0xaB4803501d26364150a4d3Cd029b8354F6dc9f3D
