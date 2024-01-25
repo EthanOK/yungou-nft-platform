@@ -103,6 +103,8 @@ contract YunGouSwap is Pausable, Ownable, ReentrancyGuard {
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
+        require(_amountTotal > 0, "Invalid amount");
+
         require(!orderIsInvalid[_orderId], "Invalid orderId");
 
         require(block.timestamp < _endTime, "Signature expired");
