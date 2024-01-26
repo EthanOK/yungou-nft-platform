@@ -43,7 +43,6 @@ contract YunGouSwap is Pausable, Ownable, ReentrancyGuard {
 
     mapping(uint256 => bool) private orderIsInvalid;
 
-    // _receiver: 0x20B04Ce868A6FD40F7df2B89AeEFaD18873ba444
     constructor(
         address _ygio,
         address _usdt,
