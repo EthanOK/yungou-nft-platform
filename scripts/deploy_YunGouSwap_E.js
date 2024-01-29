@@ -15,7 +15,7 @@ async function main() {
 
   await yunGouSwap.deployed();
 
-  console.log(`YgmeMint deployed to ${yunGouSwap.address}`);
+  console.log(`YunGouSwap deployed to ${yunGouSwap.address}`);
 }
 
 main().catch((error) => {

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract YGME is ERC721, Ownable {
+contract YunGouMember is ERC721, Ownable {
     using Counters for Counters.Counter;
     using Strings for uint256;
 
@@ -19,7 +19,7 @@ contract YGME is ERC721, Ownable {
 
     uint256 public PAY = 300 * 1e18;
 
-    uint256 public MinMax = 20;
+    uint256 public MinMax = 50;
 
     uint256 public maxLevel = 3;
 
