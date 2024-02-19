@@ -195,6 +195,19 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
         return true;
     }
 
+    function swap2(
+        address[] calldata _receivers,
+        uint256[] calldata _tokenIds
+    ) external onlyOwnerOrWhiteList whenNotPaused nonReentrant returns (bool) {
+        require(_receivers.length == _tokenIds.length, "Invalid length");
+
+        uint256[] memory _prices = new uint256[](_tokenIds.length);
+
+        _mintNFT2(_receivers, _tokenIds, _prices);
+
+        return true;
+    }
+
     function withdraw(
         address _target,
         address _account,
@@ -285,6 +298,31 @@ contract Collection is Ownable, Pausable, ReentrancyGuard, ERC721 {
             _safeMint(_receiver, _tokenId);
 
             emit SafeMint(_receiver, _tokenId, _prices[i], block.timestamp);
+        }
+
+        return true;
+    }
+
+    function _mintNFT2(
+        address[] calldata _receivers,
+        uint256[] calldata _tokenIds,
+        uint256[] memory _prices
+    ) internal returns (bool) {
+        uint256 _amount = _tokenIds.length;
+
+        for (uint256 i = 0; i < _amount; ++i) {
+            uint256 _tokenId = _tokenIds[i];
+
+            require(
+                _tokenId > 0 && _tokenId <= totalSupply_MAX,
+                "Invalid tokenId"
+            );
+
+            mintedTokenIds.push(_tokenId);
+
+            _safeMint(_receivers[i], _tokenId);
+
+            emit SafeMint(_receivers[i], _tokenId, _prices[i], block.timestamp);
         }
 
         return true;
