@@ -17,9 +17,16 @@ contract BatchTransferToken is Pausable, Ownable {
     // bytes4(keccak256("safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"))
     bytes4 constant ERC1155_BATCHTRANSFERFROM_SELECTOR = 0x2eb2c2d6;
 
+    struct Call {
+        address target;
+        bytes callData;
+    }
+
     uint256 public default_fees = 0.002 ether;
 
-    mapping(address => uint256) Fees;
+    mapping(address => uint256) public Fees;
+
+    mapping(address => bool) public whiteList;
 
     function setFees(address token, uint256 fees) external onlyOwner {
         Fees[token] = fees;
@@ -33,10 +40,45 @@ contract BatchTransferToken is Pausable, Ownable {
         payable(receiver).transfer(address(this).balance);
     }
 
+    function setWhiteList(address _white) external onlyOwner {
+        whiteList[_white] = !whiteList[_white];
+    }
+
+    function setPause() external onlyOwner {
+        if (!paused()) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
+    function aggregate(
+        Call[] calldata calls
+    )
+        external
+        payable
+        onlyWhiter
+        returns (uint256 blockNumber, bytes[] memory returnData)
+    {
+        blockNumber = block.number;
+        uint256 length = calls.length;
+        returnData = new bytes[](length);
+        Call calldata call;
+        for (uint256 i = 0; i < length; ) {
+            bool success;
+            call = calls[i];
+            (success, returnData[i]) = call.target.call(call.callData);
+            require(success, "Multicall3: call failed");
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function batchTransferETH(
         address[] calldata _tos,
         uint256[] calldata _amounts
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         address _token = address(0);
 
         uint256 _pay = msg.value;
@@ -66,7 +108,7 @@ contract BatchTransferToken is Pausable, Ownable {
         address _token,
         address _to,
         uint256[] calldata _tokenIds
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
         address _account = _msgSender();
@@ -87,7 +129,7 @@ contract BatchTransferToken is Pausable, Ownable {
         address _token,
         address[] calldata _tos,
         uint256[] calldata _tokenIds
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
         address _account = _msgSender();
@@ -111,7 +153,7 @@ contract BatchTransferToken is Pausable, Ownable {
         address _to,
         uint256[] memory _ids,
         uint256[] memory _amounts
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
         address _account = _msgSender();
@@ -141,7 +183,7 @@ contract BatchTransferToken is Pausable, Ownable {
         address[] calldata _tos,
         uint256[] calldata _ids,
         uint256[] calldata _amounts
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
         address _account = _msgSender();
@@ -173,7 +215,7 @@ contract BatchTransferToken is Pausable, Ownable {
         address _token,
         address[] calldata _tos,
         uint256[] calldata _amounts
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
         address _account = _msgSender();
@@ -277,5 +319,13 @@ contract BatchTransferToken is Pausable, Ownable {
             success && (data.length == 0 || abi.decode(data, (bool))),
             "Low-level call failed"
         );
+    }
+
+    modifier onlyWhiter() {
+        address sender = _msgSender();
+
+        require(whiteList[sender] || sender == owner(), "not whiter");
+
+        _;
     }
 }

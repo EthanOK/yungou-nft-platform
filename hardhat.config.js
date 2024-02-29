@@ -32,8 +32,8 @@ module.exports = {
     mainnet: {
       url: process.env.ALCHEMY_MAINNET_URL,
       chainId: 1,
-      // YG_Publish_ETHMAIN ygnftownerETHMAIN
-      accounts: [process.env.ygnftownerETHMAIN],
+      // YG_Publish_ETHMAIN ygnftownerETHMAIN PRIVATE_KEY
+      accounts: [process.env.PRIVATE_KEY],
     },
 
     goerli: {
