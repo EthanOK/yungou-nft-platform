@@ -133,7 +133,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
         require(!orderIsInvalid[_orderId], "Invalid orderId");
 
-        if (_convertType == 0) {
+        if (_isLocalCion(_convertType)) {
             require(block.timestamp < _endTime, "Signature expired");
         }
 
@@ -201,11 +201,15 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         address _account,
         uint256 _amount
     ) internal {
-        if (_convertType == 0) {
+        if (_isLocalCion(_convertType)) {
             ygio.transfer(BURN_ADDRESS, _amount);
         } else {
             ygio.transferFrom(_account, BURN_ADDRESS, _amount);
         }
+    }
+
+    function _isLocalCion(uint256 _convertType) internal pure returns (bool) {
+        return _convertType % 2 == 0;
     }
 
     receive() external payable {}
