@@ -9,6 +9,11 @@ async function op_g() {
     "BatchTransferToken"
   );
 
+  // console.log(BatchTransferToken.bytecode); // init code 不包含构造函数的参数
+  console.log(BatchTransferToken.getDeployTransaction()); // 包含构造函数的参数
+
+  // return;
+
   const batch = await BatchTransferToken.deploy();
 
   await batch.deployed();
@@ -23,6 +28,6 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_BatchTransferToken.js --network goerli
 
-// npx hardhat verify --network goerli 0x368FA76C8EC97482A7106277e1623048A357E019
+// npx hardhat verify --network goerli 0xe4F8432beAC41e01DfA3A11E26E79266e74Dc988
 
 // npx hardhat run scripts/deploy_BatchTransferToken.js --network mainnet

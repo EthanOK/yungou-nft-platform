@@ -17,26 +17,27 @@ library TransferLib {
     // bytes4(keccak256("safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"))
     bytes4 constant ERC1155_BATCHTRANSFERFROM_SELECTOR = 0x2eb2c2d6;
 
-    function _safeTransferERC20(
+    function safeTransferERC20(
         address target,
         address to,
         uint256 value
-    ) external {
+    ) internal {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, to, value)
         );
+
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
             "Low-level call failed"
         );
     }
 
-    function _safeTransferFromERC20(
+    function safeTransferFromERC20(
         address target,
         address from,
         address to,
         uint256 value
-    ) external {
+    ) internal {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(ERC20_TRANSFERFROM_SELECTOR, from, to, value)
         );
@@ -47,12 +48,12 @@ library TransferLib {
         );
     }
 
-    function _safeTransferFromERC721(
+    function safeTransferFromERC721(
         address target,
         address from,
         address to,
         uint256 tokenId
-    ) external {
+    ) internal {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(
                 ERC721_TRANSFERFROM_SELECTOR,
@@ -68,13 +69,13 @@ library TransferLib {
         );
     }
 
-    function _safeTransferFromERC1155(
+    function safeTransferFromERC1155(
         address target,
         address from,
         address to,
         uint256 id,
         uint256 amount
-    ) external {
+    ) internal {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(
                 ERC1155_TRANSFERFROM_SELECTOR,
@@ -92,13 +93,13 @@ library TransferLib {
         );
     }
 
-    function _safeBatchTransferFromERC1155(
+    function safeBatchTransferFromERC1155(
         address target,
         address from,
         address to,
         uint256[] memory ids,
         uint256[] memory amounts
-    ) external {
+    ) internal {
         (bool success, bytes memory data) = target.call(
             abi.encodeWithSelector(
                 ERC1155_BATCHTRANSFERFROM_SELECTOR,

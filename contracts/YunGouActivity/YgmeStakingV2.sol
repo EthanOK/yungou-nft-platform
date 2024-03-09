@@ -40,6 +40,7 @@ contract YgmeStaking is
     ReentrancyGuard
 {
     using ECDSA for bytes32;
+    using TransferLib for address;
 
     uint64 public constant ONE_CYCLE = 1 days;
 
@@ -153,12 +154,7 @@ contract YgmeStaking is
                 stakingTokenIds[_account].push(_tokenId);
             }
 
-            TransferLib._safeTransferFromERC721(
-                ygme,
-                _account,
-                address(this),
-                _tokenId
-            );
+            ygme.safeTransferFromERC721(_account, address(this), _tokenId);
 
             emit Staking(
                 _account,
@@ -228,12 +224,7 @@ contract YgmeStaking is
 
             delete stakingDatas[_tokenId];
 
-            TransferLib._safeTransferFromERC721(
-                ygme,
-                address(this),
-                _account,
-                _tokenId
-            );
+            ygme.safeTransferFromERC721(address(this), _account, _tokenId);
 
             unchecked {
                 ++i;
@@ -290,12 +281,7 @@ contract YgmeStaking is
 
             delete stakingDatas[_tokenId];
 
-            TransferLib._safeTransferFromERC721(
-                ygme,
-                address(this),
-                _account,
-                _tokenId
-            );
+            ygme.safeTransferFromERC721(address(this), _account, _tokenId);
 
             if (stakingTokenIds[_account].length == 0) {
                 accountTotal -= 1;
@@ -309,7 +295,7 @@ contract YgmeStaking is
         ygmeTotal -= uint128(length);
     }
 
-    // data = abi.encode(orderId, account, token, amount, endTime)
+    // data = abi.encode(contract, orderId, account, token, amount, endTime)
     function withdrawERC20(
         bytes calldata data,
         bytes calldata signature
@@ -332,7 +318,7 @@ contract YgmeStaking is
                 (address, uint256, address, address, uint256, uint256)
             );
 
-        require(this_contract == address(this), "");
+        require(this_contract == address(this), "Invalid contract");
 
         require(!orderIsInvalid[orderId], "Invalid orderId");
 
@@ -342,7 +328,7 @@ contract YgmeStaking is
 
         orderIsInvalid[orderId] = true;
 
-        TransferLib._safeTransferERC20(token, account, amount);
+        token.safeTransferERC20(account, amount);
 
         emit WithdrawERC20(orderId, account, amount);
 

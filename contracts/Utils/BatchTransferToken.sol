@@ -6,9 +6,27 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract BatchTransferToken is Pausable, Ownable {
+    using TransferLib for address;
+
     struct Call {
         address target;
         bytes callData;
+    }
+
+    struct ParaERC20 {
+        address to;
+        uint256 amount;
+    }
+
+    struct ParaERC721 {
+        address to;
+        uint256 tokenId;
+    }
+
+    struct ParaERC1155 {
+        address to;
+        uint256 id;
+        uint256 amount;
     }
 
     uint256 public default_fees = 0.002 ether;
@@ -65,8 +83,7 @@ contract BatchTransferToken is Pausable, Ownable {
     }
 
     function batchTransferETH(
-        address[] calldata _tos,
-        uint256[] calldata _amounts
+        ParaERC20[] calldata paras
     ) external payable whenNotPaused returns (bool) {
         address _token = address(0);
 
@@ -74,29 +91,38 @@ contract BatchTransferToken is Pausable, Ownable {
 
         uint256 _sumAmount;
 
-        require(_tos.length == _amounts.length, "Invalid Length");
+        for (uint256 i = 0; i < paras.length; ) {
+            unchecked {
+                _sumAmount += paras[i].amount;
+            }
 
-        for (uint256 i = 0; i < _tos.length; ++i) {
-            _sumAmount += _amounts[i];
+            bool success;
 
-            payable(_tos[i]).transfer(_amounts[i]);
+            (success, ) = paras[i].to.call{value: paras[i].amount}("");
+
+            require(success, "Transfer Err");
+
+            unchecked {
+                ++i;
+            }
         }
 
-        require(_pay > _sumAmount, "insufficient Payment");
+        require(_pay > _sumAmount, "Insufficient Payment");
 
-        require(
-            (_pay - _sumAmount) >=
-                (Fees[_token] > 0 ? Fees[_token] : default_fees),
-            "Insufficient fees"
-        );
+        unchecked {
+            require(
+                (_pay - _sumAmount) >=
+                    (Fees[_token] > 0 ? Fees[_token] : default_fees),
+                "Insufficient fees"
+            );
+        }
 
         return true;
     }
 
     function batchTransferERC20(
         address _token,
-        address[] calldata _tos,
-        uint256[] calldata _amounts
+        ParaERC20[] calldata paras
     ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
@@ -107,15 +133,16 @@ contract BatchTransferToken is Pausable, Ownable {
             "Insufficient fees"
         );
 
-        require(_tos.length == _amounts.length, "Invalid Length");
-
-        for (uint256 i = 0; i < _amounts.length; ++i) {
-            TransferLib._safeTransferFromERC20(
-                _token,
+        for (uint256 i = 0; i < paras.length; ) {
+            _token.safeTransferFromERC20(
                 _account,
-                _tos[i],
-                _amounts[i]
+                paras[i].to,
+                paras[i].amount
             );
+
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -135,13 +162,12 @@ contract BatchTransferToken is Pausable, Ownable {
             "Insufficient fees"
         );
 
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            TransferLib._safeTransferFromERC721(
-                _token,
-                _account,
-                _to,
-                _tokenIds[i]
-            );
+        for (uint256 i = 0; i < _tokenIds.length; ) {
+            _token.safeTransferFromERC721(_account, _to, _tokenIds[i]);
+
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -149,8 +175,7 @@ contract BatchTransferToken is Pausable, Ownable {
 
     function batchTransferERC721(
         address _token,
-        address[] calldata _tos,
-        uint256[] calldata _tokenIds
+        ParaERC721[] calldata _paras
     ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
@@ -161,15 +186,16 @@ contract BatchTransferToken is Pausable, Ownable {
             "Insufficient fees"
         );
 
-        require(_tos.length == _tokenIds.length, "Invalid Length");
-
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            TransferLib._safeTransferFromERC721(
-                _token,
+        for (uint256 i = 0; i < _paras.length; ) {
+            _token.safeTransferFromERC721(
                 _account,
-                _tos[i],
-                _tokenIds[i]
+                _paras[i].to,
+                _paras[i].tokenId
             );
+
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -192,14 +218,12 @@ contract BatchTransferToken is Pausable, Ownable {
 
         require(_amounts.length == _ids.length, "Invalid Length");
 
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            TransferLib._safeBatchTransferFromERC1155(
-                _token,
-                _account,
-                _to,
-                _ids,
-                _amounts
-            );
+        for (uint256 i = 0; i < _ids.length; ) {
+            _token.safeBatchTransferFromERC1155(_account, _to, _ids, _amounts);
+
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -207,9 +231,7 @@ contract BatchTransferToken is Pausable, Ownable {
 
     function batchTransferERC1155(
         address _token,
-        address[] calldata _tos,
-        uint256[] calldata _ids,
-        uint256[] calldata _amounts
+        ParaERC1155[] calldata _paras
     ) external payable whenNotPaused returns (bool) {
         uint256 fees = msg.value;
 
@@ -220,19 +242,17 @@ contract BatchTransferToken is Pausable, Ownable {
             "Insufficient fees"
         );
 
-        require(
-            _tos.length == _ids.length && _tos.length == _amounts.length,
-            "Invalid Length"
-        );
-
-        for (uint256 i = 0; i < _tos.length; ++i) {
-            TransferLib._safeTransferFromERC1155(
-                _token,
+        for (uint256 i = 0; i < _paras.length; ) {
+            _token.safeTransferFromERC1155(
                 _account,
-                _tos[i],
-                _ids[i],
-                _amounts[i]
+                _paras[i].to,
+                _paras[i].id,
+                _paras[i].amount
             );
+
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -243,7 +263,7 @@ contract BatchTransferToken is Pausable, Ownable {
     modifier onlyWhiter() {
         address sender = _msgSender();
 
-        require(whiteList[sender] || sender == owner(), "not whiter");
+        require(whiteList[sender] || sender == owner(), "Not whiter");
 
         _;
     }
