@@ -31,3 +31,4 @@ main().catch((error) => {
 // npx hardhat verify --network goerli 0xe4F8432beAC41e01DfA3A11E26E79266e74Dc988
 
 // npx hardhat run scripts/deploy_BatchTransferToken.js --network mainnet
+// npx hardhat verify --network mainnet 0xC384bB0A50Ae21Ea36b3d9D9864593915100D939
