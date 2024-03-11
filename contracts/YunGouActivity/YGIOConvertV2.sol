@@ -56,6 +56,8 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     bool public switchNextTime;
 
+    bool private switchGetYGME;
+
     address public BURN_ADDRESS = address(1);
 
     address private systemSigner;
@@ -94,6 +96,10 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         switchNextTime = !switchNextTime;
     }
 
+    function setSwitchGetYGME() external onlyOwner {
+        switchGetYGME = !switchGetYGME;
+    }
+
     function setBurnAddress(address burn) external onlyOwner {
         BURN_ADDRESS = burn;
     }
@@ -101,6 +107,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
     function clearNextTime(ClearData[] calldata clearDatas) external onlyOwner {
         for (uint256 i = 0; i < clearDatas.length; ) {
             delete nextTime[clearDatas[i].account][clearDatas[i].convertType];
+
             unchecked {
                 ++i;
             }
@@ -144,7 +151,9 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
     ) external whenNotPaused nonReentrant returns (bool) {
         address _account = _msgSender();
 
-        require(_getYGMEAmount(_account) > 0, "Insufficient YGME");
+        if (!switchGetYGME) {
+            require(_getYGMEAmount(_account) > 0, "Insufficient YGME");
+        }
 
         require(!orderIsInvalid[_orderId], "Invalid orderId");
 
