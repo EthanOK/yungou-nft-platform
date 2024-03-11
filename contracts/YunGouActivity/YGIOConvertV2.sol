@@ -58,7 +58,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     bool private switchGetYGME;
 
-    address public BURN_ADDRESS = address(1);
+    address public BURN_ADDRESS = 0x8f0E2855C8A1BF31D4300c704eA7Fc70Bb42ed87;
 
     address private systemSigner;
 
