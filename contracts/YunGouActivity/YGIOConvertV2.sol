@@ -31,12 +31,22 @@ interface IYGIO {
 contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
     using ECDSA for bytes32;
 
+    enum PayType {
+        LYGIO,
+        YGIO
+    }
+
     event Convert(
         uint256 indexed convertType,
         address indexed account,
         uint256 indexed amount,
         uint256 orderId
     );
+
+    struct ClearData {
+        address account;
+        uint256 convertType;
+    }
 
     IYGME public immutable ygme;
 
@@ -54,7 +64,8 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     mapping(uint256 => bool) private orderIsInvalid;
 
-    mapping(address => uint256) private nextTime;
+    // account => convertType => nextTime
+    mapping(address => mapping(uint256 => uint256)) private nextTime;
 
     constructor(
         address _ygme,
@@ -87,9 +98,12 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         BURN_ADDRESS = burn;
     }
 
-    function clearNextTime(address[] calldata accounts) external onlyOwner {
-        for (uint256 i = 0; i < accounts.length; ++i) {
-            delete nextTime[accounts[i]];
+    function clearNextTime(ClearData[] calldata clearDatas) external onlyOwner {
+        for (uint256 i = 0; i < clearDatas.length; ) {
+            delete nextTime[clearDatas[i].account][clearDatas[i].convertType];
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -121,6 +135,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     function convert(
         uint256 _orderId,
+        PayType _payType,
         uint256 _convertType,
         uint256 _amount,
         uint256 _endTime,
@@ -133,17 +148,21 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
         require(!orderIsInvalid[_orderId], "Invalid orderId");
 
-        if (_isLocalCion(_convertType)) {
+        if (_payType == PayType.LYGIO) {
             require(block.timestamp < _endTime, "Signature expired");
         }
 
         if (!switchNextTime) {
-            require(block.timestamp >= nextTime[_account], "Invalid nextTime");
+            require(
+                block.timestamp >= nextTime[_account][_convertType],
+                "Invalid nextTime"
+            );
         }
 
         bytes memory _data = abi.encode(
             address(this),
             _orderId,
+            _payType,
             _convertType,
             _account,
             _amount,
@@ -155,9 +174,9 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        _updataData(_orderId, _account, _amount, _nextTime);
+        _updataData(_orderId, _convertType, _account, _amount, _nextTime);
 
-        _excuteBurn(_convertType, _account, _amount);
+        _excuteBurn(_payType, _account, _amount);
 
         emit Convert(_convertType, _account, _amount, _orderId);
 
@@ -166,12 +185,13 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     function _updataData(
         uint256 _orderId,
+        uint256 _convertType,
         address _account,
         uint256 _amount,
         uint256 _nextTime
     ) internal {
         unchecked {
-            nextTime[_account] = _nextTime;
+            nextTime[_account][_convertType] = _nextTime;
 
             totalConvert += _amount;
 
@@ -197,19 +217,15 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
     }
 
     function _excuteBurn(
-        uint256 _convertType,
+        PayType _payType,
         address _account,
         uint256 _amount
     ) internal {
-        if (_isLocalCion(_convertType)) {
+        if (_payType == PayType.LYGIO) {
             ygio.transfer(BURN_ADDRESS, _amount);
         } else {
             ygio.transferFrom(_account, BURN_ADDRESS, _amount);
         }
-    }
-
-    function _isLocalCion(uint256 _convertType) internal pure returns (bool) {
-        return _convertType % 2 == 0;
     }
 
     receive() external payable {}
