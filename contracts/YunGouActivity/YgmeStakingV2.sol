@@ -32,7 +32,7 @@ abstract contract YgmeStakingDomain {
     event WithdrawERC20(uint256 orderId, address account, uint256 amount);
 }
 
-contract YgmeStaking is
+contract YgmeStakingV2 is
     YgmeStakingDomain,
     Pausable,
     Ownable,
