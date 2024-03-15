@@ -32,3 +32,6 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_BatchTransferToken.js --network mainnet
 // npx hardhat verify --network mainnet 0xC384bB0A50Ae21Ea36b3d9D9864593915100D939
+
+// npx hardhat run scripts/deploy_BatchTransferToken.js --network sepolia
+// npx hardhat verify --network sepolia 0x6e7f9fCcAdFD34689A9542534c25475B5FFB7282
