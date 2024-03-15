@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
+import "./MarketRegistry.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./MarketRegistry.sol";
 
 contract YunGouAggregatorV2 is Ownable, ReentrancyGuard {
     bytes4 constant SELECTOR_TRANSFERFROM_ERC20_SELECTOR = 0x23b872dd;
