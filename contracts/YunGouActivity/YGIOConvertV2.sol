@@ -43,11 +43,6 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         uint256 orderId
     );
 
-    struct ClearData {
-        address account;
-        uint256 convertType;
-    }
-
     IYGME public immutable ygme;
 
     IYgmeStaking public immutable ygmeStaking;
@@ -66,8 +61,8 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     mapping(uint256 => bool) private orderIsInvalid;
 
-    // account => convertType => nextTime
-    mapping(address => mapping(uint256 => uint256)) private nextTime;
+    // account => nextTime
+    mapping(address => uint256) private nextTime;
 
     constructor(
         address _ygme,
@@ -104,9 +99,9 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         BURN_ADDRESS = burn;
     }
 
-    function clearNextTime(ClearData[] calldata clearDatas) external onlyOwner {
-        for (uint256 i = 0; i < clearDatas.length; ) {
-            delete nextTime[clearDatas[i].account][clearDatas[i].convertType];
+    function clearNextTime(address[] calldata accounts) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; ) {
+            delete nextTime[accounts[i]];
 
             unchecked {
                 ++i;
@@ -162,10 +157,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
         }
 
         if (!switchNextTime) {
-            require(
-                block.timestamp >= nextTime[_account][_convertType],
-                "Invalid nextTime"
-            );
+            require(block.timestamp >= nextTime[_account], "Invalid nextTime");
         }
 
         bytes memory _data = abi.encode(
@@ -183,7 +175,7 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
         _verifySignature(_hash, _signature);
 
-        _updataData(_orderId, _convertType, _account, _amount, _nextTime);
+        _updataData(_orderId, _account, _amount, _nextTime);
 
         _excuteBurn(_payType, _account, _amount);
 
@@ -194,13 +186,12 @@ contract YGIOConvertV2 is Pausable, Ownable, ReentrancyGuard {
 
     function _updataData(
         uint256 _orderId,
-        uint256 _convertType,
         address _account,
         uint256 _amount,
         uint256 _nextTime
     ) internal {
         unchecked {
-            nextTime[_account][_convertType] = _nextTime;
+            nextTime[_account] = _nextTime;
 
             totalConvert += _amount;
 
