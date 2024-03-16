@@ -7,15 +7,17 @@ interface IERC721DropCloneable {
         uint96 fee;
     }
 
-    function initialize(
-        string calldata _name,
-        string calldata _symbol,
-        uint256 _totalSupply,
-        address _owner,
-        address _payToken,
-        uint256 _unitPrice,
-        FeeInfo calldata _earningFeeInfo,
-        FeeInfo calldata _platformFeeInfo,
-        string calldata __baseURI
-    ) external;
+    struct InitializeParam {
+        string _name;
+        string _symbol;
+        uint256 _totalSupply;
+        address _owner;
+        address _payToken;
+        uint256 _unitPrice;
+        FeeInfo _earningFeeInfo;
+        FeeInfo _platformFeeInfo;
+        string _baseURI;
+    }
+
+    function initialize(InitializeParam calldata param) external;
 }

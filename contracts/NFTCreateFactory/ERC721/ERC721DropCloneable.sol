@@ -2,11 +2,18 @@
 pragma solidity ^0.8.18;
 
 import "./ERC721.sol";
+import "./IERC721DropCloneable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract ERC721DropCloneable is Ownable, Pausable, ReentrancyGuard, ERC721 {
+contract ERC721DropCloneable is
+    IERC721DropCloneable,
+    Ownable,
+    Pausable,
+    ReentrancyGuard,
+    ERC721
+{
     event SafeMint(
         address indexed account,
         uint256 tokenId,
@@ -14,7 +21,7 @@ contract ERC721DropCloneable is Ownable, Pausable, ReentrancyGuard, ERC721 {
         uint256 mintTime
     );
 
-    string public constant LAUNCH_PLATFORM = "YunGou";
+    string public constant LAUNCH_PLATFORM = "YunGouLaunch";
     bytes4 constant ERC20_TRANSFERFROM_SELECTOR = 0x23b872dd;
     bytes4 constant ERC20_TRANSFER_SELECTOR = 0xa9059cbb;
     uint256 public constant BASE_10000 = 10_000;
@@ -23,11 +30,6 @@ contract ERC721DropCloneable is Ownable, Pausable, ReentrancyGuard, ERC721 {
     struct PriceData {
         bool special;
         uint256 price;
-    }
-
-    struct FeeInfo {
-        address account;
-        uint96 fee;
     }
 
     FeeInfo public platformFeeInfo;
@@ -54,32 +56,22 @@ contract ERC721DropCloneable is Ownable, Pausable, ReentrancyGuard, ERC721 {
 
     mapping(address => bool) private whiteLists;
 
-    function initialize(
-        string calldata _name,
-        string calldata _symbol,
-        uint256 _totalSupply,
-        address _owner,
-        address _payToken,
-        uint256 _unitPrice,
-        FeeInfo calldata _earningFeeInfo,
-        FeeInfo calldata _platformFeeInfo,
-        string calldata __baseURI
-    ) external initializer {
-        _initialize(_name, _symbol);
+    function initialize(InitializeParam calldata param) external initializer {
+        _initialize(param._name, param._symbol);
 
-        _transferOwnership(_owner);
+        _transferOwnership(param._owner);
 
-        totalSupply_MAX = _totalSupply;
+        totalSupply_MAX = param._totalSupply;
 
-        payToken = _payToken;
+        payToken = param._payToken;
 
-        unitPrice = _unitPrice;
+        unitPrice = param._unitPrice;
 
-        earningFeeInfo = _earningFeeInfo;
+        earningFeeInfo = param._earningFeeInfo;
 
-        platformFeeInfo = _platformFeeInfo;
+        platformFeeInfo = param._platformFeeInfo;
 
-        baseURI = __baseURI;
+        baseURI = param._baseURI;
     }
 
     function setPause() external onlyOwner {

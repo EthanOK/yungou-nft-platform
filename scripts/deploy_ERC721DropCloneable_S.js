@@ -19,4 +19,4 @@ main().catch((error) => {
 
 // npx hardhat run scripts/deploy_ERC721DropCloneable_S.js --network sepolia
 
-// npx hardhat verify --network sepolia 0x55d37aF918f20126123E610C973CA8a9838423c8
+// npx hardhat verify --network sepolia 0xf9d48aA208137A9c8363fF7b00f0ac6a7Aac5c2a

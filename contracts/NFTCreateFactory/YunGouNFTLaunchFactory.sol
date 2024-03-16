@@ -80,21 +80,23 @@ contract YunGouNFTLaunchFactory is Ownable, Pausable, ReentrancyGuard {
         address proxy = implementation.clone();
 
         IERC721DropCloneable(proxy).initialize(
-            _data.name,
-            _data.symbol,
-            _data.totalSupply,
-            _data.owner,
-            _data.payToken,
-            _data.unitPrice,
-            IERC721DropCloneable.FeeInfo(
-                _data.earningAccount,
-                BASE_10000 - platformFeeInfo.fee
-            ),
-            IERC721DropCloneable.FeeInfo(
-                platformFeeInfo.account,
-                platformFeeInfo.fee
-            ),
-            _data.baseURI
+            IERC721DropCloneable.InitializeParam(
+                _data.name,
+                _data.symbol,
+                _data.totalSupply,
+                _data.owner,
+                _data.payToken,
+                _data.unitPrice,
+                IERC721DropCloneable.FeeInfo(
+                    _data.earningAccount,
+                    BASE_10000 - platformFeeInfo.fee
+                ),
+                IERC721DropCloneable.FeeInfo(
+                    platformFeeInfo.account,
+                    platformFeeInfo.fee
+                ),
+                _data.baseURI
+            )
         );
 
         createNumber++;
