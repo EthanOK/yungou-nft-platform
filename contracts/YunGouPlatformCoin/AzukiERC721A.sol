@@ -34,8 +34,11 @@ contract Azuki is ERC721AQueryable, Ownable {
         _safeMint(to, quantity);
     }
 
-    function mint(uint256 quantity) external payable checkQuantity(quantity) {
-        _mint(msg.sender, quantity);
+    function mint(
+        address to,
+        uint256 quantity
+    ) external payable checkQuantity(quantity) {
+        _mint(to, quantity);
     }
 
     function _startTokenId() internal view virtual override returns (uint256) {
