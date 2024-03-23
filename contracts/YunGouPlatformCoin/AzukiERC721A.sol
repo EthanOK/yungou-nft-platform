@@ -67,20 +67,9 @@ contract Azuki is ERC721AQueryable, Ownable {
 
     modifier checkQuantity(uint256 quantity) {
         require(
-            !(_nextTokenId() - _startTokenId() + quantity >
-                _TOTAL_PUBLISH_NUMBER),
+            totalSupply() + quantity <= _TOTAL_PUBLISH_NUMBER,
             "Exceed Max Number"
         );
         _;
-    }
-
-    function _exists(
-        uint256 tokenId
-    ) internal view virtual override returns (bool result) {
-        if (_startTokenId() <= tokenId && tokenId < _nextTokenId()) {
-            // If Burn return false
-            return true;
-        }
-        return false;
     }
 }
