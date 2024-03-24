@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
-contract Azuki is ERC721AQueryable, Ownable {
+contract Azuki is ERC721AQueryable, AccessControl {
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+
     // Total Publish Number
     uint256 private constant _TOTAL_PUBLISH_NUMBER = 30000;
 
@@ -18,12 +21,18 @@ contract Azuki is ERC721AQueryable, Ownable {
         string memory baseURI_
     ) ERC721A("Azuki", "AZUKI") {
         _updateBaseURI(isBlindBox_, baseURI_);
+
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+        _setupRole(OWNER_ROLE, _msgSender());
+
+        _setupRole(OPERATOR_ROLE, _msgSender());
     }
 
     function updateBaseURI(
         bool isBlindBox_,
         string memory baseURI_
-    ) external onlyOwner {
+    ) external onlyRole(OWNER_ROLE) {
         _updateBaseURI(isBlindBox_, baseURI_);
     }
 
@@ -78,5 +87,20 @@ contract Azuki is ERC721AQueryable, Ownable {
             "Exceed Max Number"
         );
         _;
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        virtual
+        override(ERC721A, AccessControl, IERC721A)
+        returns (bool)
+    {
+        return
+            ERC721A.supportsInterface(interfaceId) ||
+            AccessControl.supportsInterface(interfaceId) ||
+            super.supportsInterface(interfaceId);
     }
 }
