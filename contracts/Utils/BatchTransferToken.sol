@@ -29,7 +29,7 @@ contract BatchTransferToken is Pausable, Ownable {
         uint256 amount;
     }
 
-    uint256 public default_fees = 0.002 ether;
+    uint256 public default_fees = 0.001 ether;
 
     mapping(address => uint256) public Fees;
 
@@ -107,15 +107,11 @@ contract BatchTransferToken is Pausable, Ownable {
             }
         }
 
-        require(_pay > _sumAmount, "Insufficient Payment");
-
-        unchecked {
-            require(
-                (_pay - _sumAmount) >=
-                    (Fees[_token] > 0 ? Fees[_token] : default_fees),
-                "Insufficient fees"
-            );
-        }
+        require(
+            (_pay - _sumAmount) >=
+                (Fees[_token] > 0 ? Fees[_token] : default_fees),
+            "Insufficient fees"
+        );
 
         return true;
     }
