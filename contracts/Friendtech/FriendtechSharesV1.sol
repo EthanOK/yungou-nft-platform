@@ -3,6 +3,7 @@ pragma solidity >=0.8.2 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// https://www.friend.tech
 // https://basescan.org/address/0xcf205808ed36593aa40a44f10c7f7c2f67d4a4d4#code
 // TODO: Events, final pricing model,
 
